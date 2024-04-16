@@ -1,0 +1,315 @@
+real variance_adjusted_sgt(real sigma, real lambda, real p, real q) {
+  if (p * q <= 2) 
+    reject("p * q must be > 2 found p * q = ", p * q);
+  
+  if (is_inf(q)) 
+    return sigma
+           * inv_sqrt((pi() * (1 + 3 * lambda ^ 2) * tgamma(3.0 / p)
+                       - 16 ^ (1.0 / p) * lambda ^ 2 * (tgamma(1.0 / 2 + 1.0 / p)) ^ 2
+                         * tgamma(1.0 / p))
+                      / (pi() * tgamma(1.0 / p)));
+  
+  return sigma
+         / (q ^ (1.0 / p)
+            * sqrt((3 * lambda ^ 2 + 1) * (beta(3.0 / p, q - 2.0 / p) / beta(1.0 / p, q))
+                   - 4 * lambda ^ 2 * (beta(2.0 / p, q - 1.0 / p) / beta(1.0 / p, q)) ^ 2));
+}
+
+vector mean_centered_sgt(vector x, real sigma, real lambda, real p, real q) {
+  if (p * q <= 1) 
+    reject("p * q must be > 1 found p * q = ", p * q);
+  
+  if (is_inf(q)) 
+    return x + (2 ^ (2.0 / p) * sigma * lambda * tgamma(1.0 / 2 + 1.0 / p)) / sqrt(pi());
+  
+  return x
+         + (2 * sigma * lambda * q ^ (1.0 / p) * beta(2 / p, q - 1.0 / p))
+           / beta(1.0 / p, q);
+}
+
+real skew_generalized_t_lpdf(vector x, vector mu, real sigma, real lambda, real p, real q) {
+  if (sigma <= 0) 
+    reject("sigma must be > 0 found sigma = ", sigma);
+  
+  if (lambda >= 1 || lambda <= -1) 
+    reject("lambda must be between (-1, 1) found lambda = ", lambda);
+  
+  if (p <= 0) 
+    reject("p must be > 0 found p = ", p);
+  
+  if (q <= 0) 
+    reject("q must be > 0 found q = ", q);
+  
+  int N = num_elements(x);
+  real out = 0;
+  real sigma_adj = variance_adjusted_sgt(sigma, lambda, p, q);
+  
+  if (is_inf(q) && is_inf(p)) 
+    return uniform_lpdf(x | mu - sigma_adj, mu + sigma_adj);
+  
+  vector[N] r = mean_centered_sgt(x, sigma_adj, lambda, p, q) - mu;
+  vector[N] s;
+  
+  for (n in 1 : N) 
+    s[n] = r[n] < 0 ? -1 : 1;
+  
+  if (is_inf(q) && !is_inf(p)) {
+    out = sum((abs(r) ./ (sigma_adj * (1 + lambda * s))) ^ p);
+    return log(p) - log(2) - log(sigma_adj) - lgamma(1.0 / p) - out;
+  } else {
+    out = sum(log1p(abs(r) ^ p ./ (q * sigma_adj ^ p * pow(1 + lambda * s, p))));
+  }
+  
+  return N * (log(p) - log2() - log(sigma_adj) - log(q) / p - lbeta(1.0 / p, q))
+         - (1.0 / p + q) * out;
+}
+
+real skew_generalized_t2_lpdf(vector x, real mu, real sigma, real lambda, real p, real q) {
+  if (sigma <= 0) 
+    reject("sigma must be > 0 found sigma = ", sigma);
+  
+  if (lambda >= 1 || lambda <= -1) 
+    reject("lambda must be between (-1, 1) found lambda = ", lambda);
+  
+  if (p <= 0) 
+    reject("p must be > 0 found p = ", p);
+  
+  if (q <= 0) 
+    reject("q must be > 0 found q = ", q);
+  
+  int N = num_elements(x);
+  real out = 0;
+  real sigma_adj = variance_adjusted_sgt(sigma, lambda, p, q);
+  
+  if (is_inf(q) && is_inf(p)) 
+    return uniform_lpdf(x | mu - sigma_adj, mu + sigma_adj);
+  
+  vector[N] r = mean_centered_sgt(x, sigma_adj, lambda, p, q) - mu;
+  vector[N] s;
+  
+  for (n in 1 : N) 
+    s[n] = r[n] < 0 ? -1 : 1;
+  
+  if (is_inf(q) && !is_inf(p)) {
+    out = sum((abs(r) ./ (sigma_adj * (1 + lambda * s))) ^ p);
+    return log(p) - log(2) - log(sigma_adj) - lgamma(1.0 / p) - out;
+  } else {
+    out = sum(log1p(abs(r) ^ p ./ (q * sigma_adj ^ p * pow(1 + lambda * s, p))));
+  }
+  
+  return N * (log(p) - log2() - log(sigma_adj) - log(q) / p - lbeta(1.0 / p, q))
+         - (1.0 / p + q) * out;
+}
+
+real inc_beta_inverse(real x, real p, real q) {
+  real a;
+  real acu;
+  real adj;
+  real fpu;
+  real g;
+  real h;
+  real iex;
+  int indx;
+  real pp;
+  real prev;
+  real qq;
+  real r;
+  real s;
+  real sae = -30.0;
+  real sq;
+  real t;
+  real tx;
+  real value = x;
+  real w;
+  real xin;
+  real y;
+  real yprev;
+  
+  real lbeta_val = lbeta(p, q);
+  
+  fpu = pow(10.0, sae);
+  
+  if (is_nan(x) || is_inf(x) || x < 0 || x > 1) 
+    reject("inc_beta_inverse: x must be finite and between 0 and 1; ", "found x = ", x);
+  
+  if (p <= 0.0) 
+    reject("inc_beta_inverse: p must be > 0; ", "found p = ", p);
+  
+  if (q <= 0.0) 
+    reject("inc_beta_inverse: q must be > 0; ", "found q = ", q);
+  
+  //  If the answer is easy to determine, return immediately.
+  if (x == 0.0) 
+    return value;
+  
+  if (x == 1.0) 
+    return value;
+  
+  //  Change tail if necessary.
+  if (0.5 < x) {
+    a = 1.0 - x;
+    pp = q;
+    qq = p;
+    indx = 1;
+  } else {
+    a = x;
+    pp = p;
+    qq = q;
+    indx = 0;
+  }
+  
+  //  Calculate the initial approximation.
+  r = sqrt(-log(square(a)));
+  y = r - fma(0.27061, r, 2.30753) / fma(r, fma(0.04481, r, 0.99229), 1.0);
+  
+  if (1.0 < pp && 1.0 < qq) {
+    r = (square(y) - 3.0) / 6.0;
+    s = 1.0 / (pp + pp - 1.0);
+    t = 1.0 / (qq + qq - 1.0);
+    h = 2.0 / (s + t);
+    w = y * sqrt(h + r) / h - (t - s) * (r + 5.0 / 6.0 - 2.0 / (3.0 * h));
+    value = pp / fma(exp(w + w), qq, pp);
+  } else {
+    r = qq + qq;
+    t = 1.0 / (9.0 * qq);
+    t = r * pow(fma(y, sqrt(t), 1.0 - t), 3);
+    
+    if (t <= 0.0) {
+      value = 1.0 - exp((log(fma(-qq, a, qq)) + lbeta_val) / qq);
+    } else {
+      t = (4.0 * pp + r - 2.0) / t;
+      
+      if (t <= 1.0) {
+        value = exp((log(a * pp) + lbeta_val) / pp);
+      } else {
+        value = 1.0 - 2.0 / (t + 1.0);
+      }
+    }
+  }
+  
+  //  Solve for X by a modified Newton-Raphson method,
+  //  using the function inc_beta.
+  
+  r = 1.0 - pp;
+  t = 1.0 - qq;
+  yprev = 0.0;
+  sq = 1.0;
+  prev = 1.0;
+  
+  if (value < 0.0001) 
+    value = 0.0001;
+  
+  if (0.9999 < value) 
+    value = 0.9999;
+  
+  iex = fmax(-5.0 / pp / pp - 1.0 / pow(a, 0.2) - 13.0, sae);
+  
+  acu = pow(10.0, iex);
+  
+  // Iteration loop.
+  while (1) {
+    y = inc_beta(pp, qq, value);
+    
+    xin = value;
+    y = (y - a) * exp(fma(t, log1m(xin), fma(r, log(xin), lbeta_val)));
+    
+    if (y * yprev <= 0.0) 
+      prev = fmax(sq, fpu);
+    
+    g = 1.0;
+    
+    while (1) {
+      while (1) {
+        adj = g * y;
+        sq = square(adj);
+        
+        if (sq < prev) {
+          tx = value - adj;
+          if (0.0 <= tx && tx <= 1.0) 
+            break;
+        }
+        g = g / 3.0;
+      }
+      
+      //  Check whether the current estimate is acceptable.
+      //  The change "VALUE = TX" was suggested by Ivan Ukhov.
+      if (prev <= acu || y * y <= acu) {
+        value = tx;
+        if (indx == 1) 
+          value = 1.0 - value;
+        return value;
+      }
+      
+      if (tx != 0.0 && tx != 1.0) 
+        break;
+      
+      g = g / 3.0;
+    }
+    
+    if (tx == value) 
+      break;
+    
+    value = tx;
+    yprev = y;
+  }
+  
+  if (indx == 1) 
+    value = 1.0 - value;
+  
+  return value;
+}
+
+
+real skew_generalized_t_qf(real x, real mu, real sigma, real lambda, real p, real q) {
+  if (sigma <= 0) 
+    reject("sigma must be > 0 found sigma = ", sigma);
+  
+  if (lambda >= 1 || lambda <= -1) 
+    reject("lambda must be between (-1, 1) found lambda = ", sigma);
+  
+  if (p <= 0) 
+    reject("p must be > 0 found p = ", p);
+  
+  if (q <= 0) 
+    reject("q must be > 0 found q = ", q);
+  
+  // needs the gamma_qf
+  if (!is_inf(p) && is_inf(q)) 
+    reject("not yet implemented for infinite q");
+  
+  if (is_inf(p)) 
+    reject("not yet implemented for infinite p");
+  
+  real prob;
+  real lam;
+  real out;
+  real sigma_adj = variance_adjusted_sgt(sigma, lambda, p, q);
+  
+  if (x > 0.5 * (1 - lambda)) {
+    prob = 1 - x;
+    lam = -lambda;
+    out = -(sigma_adj * (lam - 1)
+            * (1 / (q * inc_beta_inverse(1 - 2 * prob / (1 - lam), 1 / p, q)) - 1 / q)
+              ^ (-1 / p));
+  } else {
+    prob = x;
+    lam = lambda;
+    out = sigma_adj * (lam - 1)
+          * (1 / (q * inc_beta_inverse(1 - 2 * prob / (1 - lam), 1 / p, q)) - 1 / q)
+            ^ (-1 / p);
+  }
+  
+  out -= (2 * sigma_adj * lambda * q ^ (1 / p) * beta(2 / p, q - 1 / p)) / beta(1 / p, q);
+  
+  return out + mu;
+}
+
+
+
+real skew_generalized_t_rng(real mu, real sigma, real lambda, real p, real q) {
+
+  real u = uniform_rng( 0, 1 );
+  real rng_val = skew_generalized_t_qf(u, mu, sigma, lambda, p, q);
+  
+  return rng_val;
+}

@@ -1,0 +1,375 @@
+---
+title: Supplement for "A Bayesian Record Linkage Approach to Tree Demography Using Overlapping Lidar Scans" 
+author: 
+  - name: Lane Drew
+    shortname: Drew L.,
+    numaddress: 1
+    corresponding: true
+  - name: Andee Kaplan
+    shortname: Kaplan A., and
+    numaddress: 1
+    corresponding: false
+  - name: Ian Breckheimer
+    shortname: Breckheimer I.
+    numaddress: 2
+    corresponding: false
+corresponding: true
+corresponding_name: Lane Drew
+corresponding_address: Department of Statistics, Colorado State University, Fort Collins, Colorado 80523-1877
+corresponding_email: lane.drew@colostate.edu
+output: 
+  pdf_document: 
+    keep_tex: false
+    template: "../paper/aoas-template.tex"
+    includes:
+        in_header: "../paper/preamble_common.tex"
+bibliography: "../paper/References-Lib.bib"
+keywords: Record Linkage, Entity Resolution, LiDAR, Tree Demography
+---
+
+\appendix
+
+\section{Model Specification and Implementation Details}\label{appA}
+
+\subsection{Model Specification}
+
+We present the joint posterior distribution of the record linkage model and the full conditional distributions, which provide the basis for the MCMC algorithm used to sample from the posterior distribution.  
+
+The joint posterior distribution of the model is
+$$
+\baln
+[&\bmLambda, \bms, \sigma^2, \theta, \bmt \mid \bmy] \\
+&\propto \prod_{i=1}^m \prod_{j=1}^{n_i} [\bmy_{ij} \mid \bms_{\lambda_{ij}}, \sigma^2, \theta_i, \bmt_i, D] \times \prod_{j'=1}^N [\bms_{j'}] \times [\bmLambda \mid N] \times [\sigma^2] \times \prod_{i=2}^m \biggl \{ [\theta_i] \times [\bmt_i] \biggr \}\\
+&\propto \biggl \{ \prod_{i=1}^m \prod_{j=1}^{n_i} (\sigma^2)^{-1} \text{exp} \biggl ( -\frac{1}{2\sigma^2} (\bmy_{ij} - (\bmR(\theta_i)(\bms_{\lambda_{ij}} - \bmmu_D) + \bmt_i + \bmmu_D))^\mT (\bmy_{ij} - (\bmR(\theta_i)(\bms_{\lambda_{ij}} - \bmmu_D) + \bmt_i + \bmmu_D)) \biggr ) \biggr \} \\
+&\times |D|^{-N} \frac{d_\sigma^{c_\sigma}}{\Gamma(c_\sigma)}(\sigma^2)^{-c_\sigma-1} \text{exp} \biggl (-\frac{d_\sigma}{\sigma^2} \biggr ) I\left\{\sigma^2 < b_\sigma \right\} \frac{N!}{N^n} \\
+&\times \biggl \{ \prod_{i=2}^m \text{exp} \biggl (\kappa \cos(\nu) \cos(\theta_i) + \kappa \sin(\nu) \sin(\theta_i) \biggr ) \text{exp} \biggl (-\frac{1}{2\sigma_t^2} \bmt_i^\mT \bmt_i \biggr ) \biggr \} \\
+&\propto \text{exp} \biggl (-\frac{1}{\sigma^2} \biggl \{\frac{1}{2} \sum_{i=1}^m \sum_{j=1}^{n_i} (\bmy_{ij} - (\bmR(\theta_i)(\bms_{\lambda_{ij}} - \bmmu_D) + \bmt_i + \bmmu_D))^\mT (\bmy_{ij} - (\bmR(\theta_i)(\bms_{\lambda_{ij}} - \bmmu_D) + \bmt_i + \bmmu_D)) + d_\sigma \biggr \} \biggr ) \\
+&\times (\sigma^2)^{-n-c_\sigma-1} I\left\{\sigma^2 < b_\sigma \right\} \biggl \{ \prod_{i=2}^m \text{exp} \biggl (\kappa \cos(\nu) \cos(\theta_i) + \kappa \sin(\nu) \sin(\theta_i) \biggr ) \text{exp} \biggl (-\frac{1}{2\sigma_t^2} \bmt_i^\mT \bmt_i \biggr ) \biggr \},
+\ealn
+$$
+where $n = \sum_{i=1}^m n_i$.  
+
+The full conditional distributions for the model parameters are
+$$
+\baln
+\sigma^2 \mid \bms, \bmLambda, \bmtheta, \bmT, \bmy &\sim \text{Truncated Inverse-Gamma} \biggl (n + c_\sigma, \\
+& \quad \frac{1}{2} \sum_{i=1}^m \sum_{j=1}^{n_i} (\bmy_{ij} - (\bmR(\theta_i)(\bms_{\lambda_{ij}} - \bmmu_D) + \bmt_i + \bmmu_D))^\mT \\ 
+&\quad \quad \quad (\bmy_{ij} - (\bmR(\theta_i)(\bms_{\lambda_{ij}} - \bmmu_D) + \bmt_i + \bmmu_D)) + d_\sigma, 0, b_\sigma \biggr ) \\
+\bms_{j'} \mid \bmLambda, \sigma^2, \bmtheta, \bmT, \bmy &\sim \text{TN}_2 \biggl (\frac{1}{n_{j'}} \sum_{i=1}^m \sum_{(j): \lambda_{ij} = j'} \biggl [ \bmR(\theta_i)^\mT(\bmy_{ij} - \bmt_i - \bmmu_D) + \bmmu_D \biggr ], \frac{\sigma^2}{n_{j'}} \bmI, D^* \biggr ) \\
+P(\lambda_{ij} = \ell \mid \bmLambda_{-(ij)}, \sigma^2, \bms, \theta_i, \bmt_i, \bmy) &\propto \text{exp} \biggl (-\frac{1}{2\sigma^2} (\bmy_{ij} - (\bmR(\theta_i)(\bms_{\ell} - \bmmu_D) + \bmt_i + \bmmu_D))^\mT \\
+& \quad (\bmy_{ij} - (\bmR(\theta_i)(\bms_{\ell} - \bmmu_D) + \bmt_i + \bmmu_D)) \biggr ) \\
+\theta_i \mid \bms, \bmLambda, \sigma^2, \bmt_i, \bmy &\propto \text{exp} \biggl ( (\kappa \cos(\nu) + \bmS_{i_{11}} + \bmS_{i_{22}})\cos(\theta_i) + (\kappa \sin(\nu) - \bmS_{i_{12}} + \bmS_{i_{21}})\sin(\theta_i) \biggr ) \\
+&\quad \text{where } \bmS_i = \frac{1}{2\sigma^2} \sum_{j = 1}^{n_i} (\bmy_{ij} - \bmt_i - \bmmu_D) (\bms_{\lambda_{ij}} - \bmmu_D)^\mT \\
+\bmt_i \mid \bms, \bmLambda, \sigma^2, \theta_i, \bmy &\sim \text{N}_2 \biggl ( \biggl ( \frac{\sigma_t^2}{n_i \sigma_t^2 + \sigma^2} \biggr )\sum_{j = 1}^{n_i} \{ \bmy_{ij} - [\bmR(\theta_i)( \bms_{\lambda_{ij}} - \bmmu_D) + \bmmu_D] \}, \frac{\sigma_t^2 \sigma^2}{n_i \sigma_t^2 + \sigma^2}  \bmI \biggr ).
+\ealn
+$$
+
+The rotation and translation parameters indexed above by $i$ take values $i = 2, \dots, m$ where $\theta_1 = 0$ and $\bmt_1 = \bbmx 0 & 0 \ebmx^\mT$. We also note that the conditional distribution of the linkage structure reflects the possibility of duplicate records within files (or scans).  
+
+\subsection{Gibbs Sampler Algorithm}
+
+The algorithm below describes the MCMC Gibbs sampler algorithm for sampling from the joint posterior distribution of the spatial record linkage model. As above, the rotation and translation parameters indexed by $i$ take values $i = 2, \dots, m$.
+
+
+1. Define initial values for ${\sigma^2}^{(0)}, \{\bms_{j'}^{(0)}\}_{j'=1}^N, \{ \theta_i^{(0)} \}_{i=2}^m, \{ \bmt_i^{(0)} \}_{i=2}^m$ and $\bmLambda^{(0)}$.  
+1. Set $k=1$.
+1. Update $\bmLambda^{(k)}$ using a Gibbs sampling step for each $\lambda_{ij}^{(k)}$, making use of the Gumbel max trick from \cite{gumbelStatisticalTheoryExtreme1954a}, 
+  \begin{align*}
+  \eta_{ij\ell}^{(k)} &= -\frac{1}{2\sigma^2} (\bmy_{ij} - (\bmR(\theta_i^{(k-1)})(\bms_{\ell}^{(k-1)} - \bmmu_D) + \bmt_i^{(k-1)} + \bmmu_D))^\mT \\
+  &\quad(\bmy_{ij} - (\bmR(\theta_i^{(k-1)})(\bms_{\ell}^{(k-1)} - \bmmu_D) + \bmt_i^{(k-1)} + \bmmu_D)) \\
+  z_\ell & \stackrel{iid}{\sim} \text{Gumbel}(0, 1) \\
+  \lambda_{ij}^{(k)} &= \arg\max\limits_{\ell = 1, \dots, N} \eta_{ij\ell}^{(k)} + z_\ell
+  \end{align*}
+1. Update $\bms^{(k)}$ using Gibbs sampling for each $\bms_{j'}^{(k)}$,
+  $$
+  \bms_{j'}^{(k)} \sim \text{TN}_2 \biggl (\frac{1}{n_{j'}^{(k)}} \sum_{i=1}^m \sum_{(j): \lambda_{ij}^{(k)} = j'} \biggl [ \bmR(\theta_i^{(k-1)})^\mT(\bmy_{ij} - \bmt_i^{(k-1)} - \bmmu_D) + \bmmu_D \biggr ], \frac{{\sigma^2}^{(k-1)}}{n_{j'}^{(k)}} \bmI, D^* \biggr )
+  $$
+1. Update ${\sigma^2}^{(k)}$ using Gibbs sampling,
+  $$
+  \baln
+  {\sigma^2}^{(k)} &\sim \text{Truncated Inverse Gamma}\biggl (n + c_\sigma, \frac{1}{2} \sum_{i=1}^m \sum_{j=1}^{n_i} (\bmy_{ij} - (\bmR(\theta_i^{(k-1)})(\bms_{\lambda_{ij}^{(k)}}^{(k)} - \bmmu_D) + \bmt_i^{(k-1)} + \bmmu_D))^\mT \\
+  &\quad (\bmy_{ij} - (\bmR(\theta_i^{(k-1)})(\bms_{\lambda_{ij}^{(k)}}^{(k)} - \bmmu_D) + \bmt_i^{(k-1)} + \bmmu_D)) + d_\sigma, 0, b_\sigma \biggr ).
+   \ealn
+  $$
+1. Update ${\theta_i}^{(k)}$ using Metropolis-Hastings. Propose $\theta_i^* \sim \text{N}(\theta_i^{(k-1)}, \sigma^2_{\theta,\text{tune}})$, noting that the proposal is symmetric. Calculate the M-H ratio as follows
+  $$
+  \baln
+  {mh}_{\theta_i} &= \frac{[\theta_i^*, \bmtheta_{-i}^{(k-1)}, \bms^{(k)}, \bmLambda^{(k)}, {\sigma^2}^{(k)}, \bmT^{(k-1)} \mid \bmy]}{[\theta_i^{(k-1)}, \bmtheta_{-i}^{(k-1)}, \bms^{(k)}, \bmLambda^{(k)}, {\sigma^2}^{(k)}, \bmT^{(k-1)} \mid \bmy]}.
+  \ealn
+  $$
+  Set $\theta_i^{(k)} = \theta_i^*$ with probability min$(1, {mh}_{\theta_i})$; otherwise, set $\theta_i^{(k)} = \theta_i^{(k-1)}$. Repeat for $i = 2, \dots, m$.  
+1. Update $\bmt_i^{(k)}$ using Gibbs sampling,
+  $$
+  \bmt_i \sim \text{N}_2 \biggl ( \biggl ( \frac{\sigma_t^2}{n_i \sigma_t^2 + {\sigma^2}^{(k)}} \biggr )\sum_{j = 1}^{n_i} (\bmy_{ij} - [\bmR(\theta_i^{(k)}) (\bms_{\lambda_{ij}}^{(k)} - \bmmu_D) + \bmmu_D ], \frac{\sigma_t^2 {\sigma^2}^{(k)}}{n_i \sigma_t^2 + {\sigma^2}^{(k)}} \bmI \biggr ).
+  $$
+  Repeat for $i = 2, \dots, m$.
+
+1. Save $\{ \bms_{j'}^{(k)} \}_{j'=1}^N$, ${\sigma^2}^{(k)}$, $\{ \theta_i^{(k)} \}_{i=2}^m$, $\{ \bmt_i^{(k)} \}_{i=2}^m$, and $\bmLambda^{(k)}$.
+1. Set $k=k+1$ and return to Step 3. Iterate this algorithm through steps 3-8 until the sample size is large enough to adequately approximate the joint posterior distribution.
+
+For the Metropolis-Hastings within Gibbs step for updating $\theta_i$, we use an adaptive algorithm that targets an acceptance ratio of .44 as discussed in Chapter 4 of \cite{brooksHandbookMarkovChain2011}. 
+
+
+\section{Proof of Theorem 4.1}\label{appB}
+
+We provide the proof of Theorem 4.1 (Bayesian validity of linkage-averaged auxiliary data model parameters joint posterior), which follows a similar structure to the proof of Theorem 4.1 in \cite{sadinleBayesianPropagationRecord2018}.
+
+\begin{proof}
+  The joint posterior of $\bmTheta$, $\bmLambda$, and $\bms$ is $p(\bmTheta, \bmLambda, \bms \mid \bmy) \propto \mathcal{L}_\text{L}(\bmLambda, \bms \mid \bmy) p_\text{AD} (\bmTheta \mid \mathcal{C}(\bmLambda), \bmX(s))  p(\bmLambda)  p(\bms)$ such that the inverse proportionality constant is $\sum_{\bmLambda} \sum_{\bms} \sum_{\bmTheta} \mathcal{L}_\text{L}(\bmLambda, \bms \mid \bmy) p_\text{AD} (\bmTheta \mid \mathcal{C}(\bmLambda), \bmX(s))  p(\bmLambda)  p(\bms) = \sum_{\bmLambda} \sum_{\bms} \mathcal{L}_\text{L}(\bmLambda, \bms \mid \bmy)$ since $\sum_{\bmTheta} p_\text{AD} (\bmTheta \mid \mathcal{C}(\bmLambda), \bmX(s)) = 1$. As $p_\text{L}(\bmLambda, \bms \mid \bmy) \propto \mathcal{L}_\text{L}(\bmLambda, \bms \mid \bmy) p(\bmLambda)  p(\bms)$ with inverse proportionality constant $\sum_{\bmLambda} \sum_{\bms} \mathcal{L}_\text{L}(\bmLambda, \bms \mid \bmy) p(\bmLambda)  p(\bms)$, it follows that $p(\bmTheta, \bmLambda, \bms \mid \bmy) = p_\text{AD} (\bmTheta \mid \mathcal{C}(\bmLambda), \bmX(s)) p_\text{L} (\bmLambda, \bms \mid \bmy)$. Then, $p(\bmTheta \mid \bmy) = \sum_{\bmLambda} \sum_{\bms} p(\bmTheta, \bmLambda, \bms \mid \bmy) = \sum_{\bmLambda} \sum_{\bms} p_\text{AD} (\bmTheta \mid \mathcal{C}(\bmLambda), \bmX(s)) p_\text{L} (\bmLambda, \bms \mid \bmy) = p_{\text{LA}}(\bmTheta)$.
+\end{proof}
+
+
+
+\section{Empirical Data Analysis Details}\label{appC}
+
+\subsection{Empirical Model Specifications}
+
+Following the general structure introduced in Section 3.1, in our analysis of the RMBL dataset we specified the record linkage model as follows
+$$
+\baln
+\bmy_{ij} \mid \bms_{\lambda_{ij}}, \sigma^2, \theta_i, \bmt_i, D &\stackrel{ind}{\sim} \text{Normal}_2\left(\bmR\left(\theta_i\right)\left(\bms_{\lambda_{ij}} - \bmmu_D\right) + \bmt_i + \bmmu_D, \sigma^2 \bmI, D\right) \\
+\bms_{j'} \mid N &\stackrel{iid}{\sim} \text{Uniform}\left(D^*\right) \\
+\sigma^2 &\sim \text{Truncated Inverse Gamma}\left(.0001, .0001, 0, 3.175 \right) \\
+\lambda_{ij} \mid N &\stackrel{iid}{\sim} \text{Uniform}\left\{1,\dots,N\right\} \\
+\bmt_i &\sim \text{Normal}_2 \left(\bm0, .0001^2 \bmI\right),
+\ealn
+$$
+where $D^*$ extends the bounds of $D$ by 1 meter in each direction and with $\theta_1=\theta_2=0$. We specified the prior on $\sigma^2$ to be uninformative and chose the upper bound relative to the maximum reasonable displacement between a tree top and its base. We selected $\sigma_t^2 = .0001^2$ to limit the amount of translation possible relative to the expectation that these shifts would be on the scale of 10-30 centimeters based on the calibration of the ALS equipment.  
+
+Following the general structure introduced in Section 3.2, we specified the downstream growth model as follows
+$$
+\baln
+g_c \mid \gamma, \bmbeta, \tau^2, \bmLambda, \bmx_{\bms_c}, \bmv^* &\sim \text{Skewed t} \left( \mu_c, \tau, \delta, \omega \right) \\
+\tau &\sim \text{Uniform} \left(0, 100 \right) \\
+\delta &\sim \text{Truncated Normal} \left( 0, .1^2, -1, 1 \right) \\
+\omega &\sim \text{Gamma} \left(2, 0.2 \right) \\
+\gamma &\sim \text{Uniform}\left(200, 2073.17 \right) \\
+\alpha &\sim \text{Beta}\left(1, 1, .5, 5 \right) \\
+\beta_0 &\sim \text{Normal} \left(0, 20^2 \right) \\
+\beta_k &\sim \text{Normal} \left(0, 2.5^2 \right).
+\ealn
+$$
+The hyperparameters for this model were chosen to be uninformative where possible. In specifying the range for $\gamma$, we relied on the input of our subject matter expert for the lower bound and specified the upper bound as the largest size (canopy volume) observed in the 2015 dataset. For the lower bound on $\alpha$, we found when this value was unconstrained the sampler would push the value towards 0 so we specified a reasonable lower bound based on our expectations regarding the shape of the growth function. 
+
+
+\subsection{Empirical Model Convergence Diagnostics}
+
+In this section, we provide select convergence diagnostics for the two-stage record linkage model fit to the RMBL dataset.
+
+To assess the convergence of the record linkage model, we inspected traceplots for the continuous model parameters and then considered the
+number of unique estimated individuals from the linkage shown in Figure \ref{N_conv}. We see that the chains converge to a stable distribution, and after burn-in we calculate a corresponding Gelman Rubin statistic of $\hat{R} = 1.10071$. 
+
+\begin{figure}
+\includegraphics[width = \textwidth]{"../plots/F23/N_conv_plot2.png"}
+\caption{Traceplot for the number of unique individuals from the four empirical linkage model chains after thinning.}
+\label{N_conv}
+\end{figure}
+
+\subsection{Model Selection Criteria}
+
+In this section, we provide the model selection details for the empirical data analysis mentioned in Section 5. Figure \ref{rep_dens_comp} shows the replicated densities from the fitted models for each linkage approach. We note that the replicated densities are just for a single iteration from each model, but are representative of the general behavior of the models.
+
+\begin{figure}
+\includegraphics[width = \textwidth]{"../plots/F23/all_rep_dens_comp_plot.png"}
+\caption{Plots comparing the observed density of annual growth to the replicated densities from the Skewed t, Skew Normal, Normal, and MLR models for each linkage approach.}
+\label{rep_dens_comp}
+\end{figure}
+
+In Table \ref{scrps_table}, we present the sCRPS for each model variant for the Linkage-Averaging approach fit to the RMBL dataset. Values of sCRPS closer to 0 indicate a better fit for the model. Results for the POM and NDM linkage approaches were similar as seen in Table \ref{scrps_table2}. All three linkage approaches selected the Skewed t as the best fitting model in terms of sCRPS. We note that the sCRPS presented for the LA approach is the average sCRPS across the 100 different downstream model fits. 
+
+\begin{table}
+\label{scrps_table}
+\centering
+\caption{sCRPS scores by model variant for the Linkage-Averaging approach.}
+\centering
+\begin{tabular}[t]{lrr}
+\toprule
+\multicolumn{1}{c}{\textbf{ }} & \multicolumn{2}{c}{\textbf{sCRPS Value}} \\
+\cmidrule(l{3pt}r{3pt}){2-3}
+Model & Mean & SE\\
+\midrule
+Skewed t & \textbf{-1.9766} & 0.0003\\
+Skew Normal & -2.0198 & 0.0003\\
+Normal & -1.9939 & 0.0002\\
+MLR & -1.9966 & 0.0002\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}
+\label{scrps_table2}
+\centering
+\caption{sCRPS scores by model variant for the Polygon Overlap Matching and Nearest Distance Matching approaches.}
+\centering
+\begin{tabular}[t]{llrr}
+\toprule
+\multicolumn{2}{c}{\textbf{ }} & \multicolumn{2}{c}{\textbf{sCRPS Value}} \\
+\cmidrule(l{3pt}r{3pt}){3-4}
+Linkage & Model & Estimate & SE\\
+\midrule
+ & Skewed t & \textbf{-1.9774} & 0.0016\\
+\cmidrule{2-4}
+ & Skew Normal & -1.9851 & 0.0014\\
+\cmidrule{2-4}
+ & Normal & -1.9870 & 0.0014\\
+\cmidrule{2-4}
+\multirow{-4}{*}{\raggedright\arraybackslash POM} & MLR & -1.9889 & 0.0014\\
+\cmidrule{1-4}
+ & Skewed t & \textbf{-2.0562} & 0.0032\\
+\cmidrule{2-4}
+ & Skew Normal & -2.1033 & 0.0027\\
+\cmidrule{2-4}
+ & Normal & -2.0756 & 0.0021\\
+\cmidrule{2-4}
+\multirow{-4}{*}{\raggedright\arraybackslash NDM} & MLR & -2.0768 & 0.0021\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Additional Simulation Results}\label{appD}
+
+
+In this section, we provide some additional simulation results for the two-stage models. We compare the performance of the linkage-averaging and nearest distance matching approaches compared to the true linkage. Table \ref{cov_table_2} and Table \ref{cov_table_3} show the coverage results for $\alpha = 2$ and $\alpha = 3$ simulation studies respectively, which mirror the results for $\alpha = 1$ shown in Section 6. We note that the coverage rates for the true linkage model are consistently around the 90% nominal coverage rate, which serves as the gold standard for the growth model performance. Comparing the LA and NDM approaches, we see that the LA approach tends to outperform the NDM approach and often by a substantial margin. In the instances where the NDM coverage is closer to the nominal level, the coverage for the LA approach is generally more conservative due to the uncertainty propagation from the linkage stage of the modeling pipeline. These results are in line with our expectations regarding the performance of the different linkage approaches, and provide evidence that the two-stage linkage-averaging framework can reliably recover the parameters of interest from a downstream model. They also highlight the trend that while the LA and NDM approaches may have similar coverage for the covariate coefficients, the coverage for the growth asymptote $\beta_0$ is much better for the LA model.
+
+\label{cov_table_2}
+\begin{table}
+\centering
+\caption{Empirical coverage table for $\alpha = 2$.}
+\centering
+\begin{tabular}[t]{lllccccc}
+\toprule
+\multicolumn{3}{c}{\textbf{ }} & \multicolumn{5}{c}{\textbf{Empirical Coverage by Parameter}} \\
+\cmidrule(l{3pt}r{3pt}){4-8}
+Density & Noise & Linkage Approach & $\beta_0$ & $\beta_1$ & $\beta_2$ & $\beta_3$ & $\beta_4$\\
+\midrule
+ &  & TL & 0.88 & 0.87 & 0.93 & 0.94 & 0.90\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.92} & \textbf{0.94} & \textbf{0.96} & 0.97 & \textbf{0.93}\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Small} & NDM & 0.28 & 0.85 & 0.83 & \textbf{0.86} & 0.82\\
+\cmidrule{2-8}
+ &  & TL & 0.89 & 0.87 & 0.94 & 0.94 & 0.88\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.90} & \textbf{0.94} & 0.98 & 0.97 & 0.96\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Medium} & NDM & 0.24 & 0.82 & \textbf{0.89} & \textbf{0.87} & \textbf{0.86}\\
+\cmidrule{2-8}
+ &  & TL & 0.90 & 0.90 & 0.91 & 0.90 & 0.87\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.82} & 1.00 & 0.98 & 1.00 & 1.00\\
+\cmidrule{3-8}
+\multirow{-9}{*}[4\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Low} & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Large} & NDM & 0.08 & \textbf{0.86} & \textbf{0.87} & \textbf{0.87} & \textbf{0.86}\\
+\cmidrule{1-8}
+ &  & TL & 0.92 & 0.87 & 0.89 & 0.90 & 0.91\\
+\cmidrule{3-8}
+ &  & LA &\textbf{0.90} & \textbf{0.93} & \textbf{0.95} & 0.95 & \textbf{0.93}\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Small} & NDM & 0.41 & 0.71 & 0.84 & \textbf{0.87} & 0.83\\
+\cmidrule{2-8}
+ &  & TL & 0.87 & 0.89 & 0.87 & 0.85 & 0.83\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.96} & \textbf{0.99} & 0.98 & 0.99 & 0.99\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Medium} & NDM & 0.21 & 0.70 & \textbf{0.94} & \textbf{0.87} & \textbf{0.86}\\
+\cmidrule{2-8}
+ &  & TL & 0.94 & 0.90 & 0.92 & 0.92 & 0.86\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.25} & \textbf{0.99} & 1.00 & 0.99 & 1.00\\
+\cmidrule{3-8}
+\multirow{-9}{*}[4\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Medium} & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Large} & NDM & 0.00 & 0.79 & \textbf{0.95} & \textbf{0.89} & \textbf{0.89}\\
+\cmidrule{1-8}
+ &  & TL & 0.89 & 0.86 & 0.87 & 0.87 & 0.93\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.95} & \textbf{0.92} & \textbf{0.91} & \textbf{0.93} & \textbf{0.94}\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Small} & NDM & 0.36 & 0.74 & 0.95 & \textbf{0.87} & \textbf{0.86}\\
+\cmidrule{2-8}
+ &  & TL & 0.85 & 0.91 & 0.94 & 0.94 & 0.89\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.96} & \textbf{1.00} & \textbf{0.99} & 0.99 & \textbf{0.98}\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Medium} & NDM & 0.19 & 0.77 & \textbf{0.99} & \textbf{0.90} & \textbf{0.82}\\
+\cmidrule{2-8}
+ &  & TL & 0.89 & 0.91 & 0.90 & 0.90 & 0.86\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.20} & \textbf{0.99} & \textbf{1.00} & 1.00 & 1.00\\
+\cmidrule{3-8}
+\multirow{-9}{*}[4\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash High} & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Large} & NDM & 0.00 & 0.79 & \textbf{1.00} & \textbf{0.99} & \textbf{0.92}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}
+\label{cov_table_3}
+\centering
+\caption{Empirical coverage table for $\alpha = 3$.}
+\centering
+\begin{tabular}[t]{lllccccc}
+\toprule
+\multicolumn{3}{c}{\textbf{ }} & \multicolumn{5}{c}{\textbf{Empirical Coverage by Parameter}} \\
+\cmidrule(l{3pt}r{3pt}){4-8}
+Density & Noise & Linkage Approach & $\beta_0$ & $\beta_1$ & $\beta_2$ & $\beta_3$ & $\beta_4$\\
+\midrule
+ &  & TL & 0.88 & 0.88 & 0.85 & 0.87 & 0.88\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.87} & \textbf{0.91} & \textbf{0.90} & 0.91 & \textbf{0.92}\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Small} & NDM & 0.35 & 0.85 & 0.85 & \textbf{0.90} & 0.84\\
+\cmidrule{2-8}
+ &  & TL & 0.91 & 0.91 & 0.86 & 0.95 & 0.89\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.94} & \textbf{0.98} & 0.94 & 0.98 & \textbf{0.94}\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Medium} & NDM & 0.25 & 0.81 & \textbf{0.93} & \textbf{0.96} & 0.82\\
+\cmidrule{2-8}
+ &  & TL & 0.89 & 0.92 & 0.89 & 0.85 & 0.86\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.86} & 0.98 & 0.99 & 0.99 & 1.00\\
+\cmidrule{3-8}
+\multirow{-9}{*}[4\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Low} & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Large} & NDM & 0.07 & \textbf{0.90} & \textbf{0.87} & \textbf{0.90} & \textbf{0.92}\\
+\cmidrule{1-8}
+ &  & TL & 0.87 & 0.85 & 0.92 & 0.92 & 0.91\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.91} & \textbf{0.94} & 0.94 & 0.93 & \textbf{0.94}\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Small} & NDM & 0.38 & 0.76 & \textbf{0.92} & \textbf{0.92} & 0.81\\
+\cmidrule{2-8}
+ &  & TL & 0.86 & 0.86 & 0.92 & 0.92 & 0.88\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.90} & \textbf{0.97} & 0.98 & 0.98 & 0.99\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Medium} & NDM & 0.20 & 0.76 & \textbf{0.91} & \textbf{0.88} & \textbf{0.83}\\
+\cmidrule{2-8}
+ &  & TL & 0.88 & 0.93 & 0.91 & 0.90 & 0.91\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.26} & \textbf{1.00} & 1.00 & 1.00 & 1.00\\
+\cmidrule{3-8}
+\multirow{-9}{*}[4\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Medium} & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Large} & NDM & 0.06 & 0.72 & \textbf{0.95} & \textbf{0.91} & \textbf{0.87}\\
+\cmidrule{1-8}
+ &  & TL & 0.91 & 0.94 & 0.96 & 0.93 & 0.93\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.90} & \textbf{0.97} & 0.97 & \textbf{0.95} & \textbf{0.95}\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Small} & NDM & 0.42 & 0.82 & \textbf{0.91} & \textbf{0.85} & 0.78\\
+\cmidrule{2-8}
+ &  & TL & 0.93 & 0.84 & 0.90 & 0.91 & 0.92\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.91} & \textbf{0.98} & 0.99 & 0.99 & 1.00\\
+\cmidrule{3-8}
+ & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Medium} & NDM & 0.21 & 0.81 & \textbf{0.94} & \textbf{0.86} & \textbf{0.84}\\
+\cmidrule{2-8}
+ &  & TL & 0.90 & 0.88 & 0.89 & 0.90 & 0.93\\
+\cmidrule{3-8}
+ &  & LA & \textbf{0.12} & 0.99 & \textbf{1.00} & 1.00 & \textbf{0.99}\\
+\cmidrule{3-8}
+\multirow{-9}{*}[4\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash High} & \multirow{-3}{*}[1\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\raggedright\arraybackslash Large} & NDM & 0.00 & \textbf{0.84} & \textbf{1.00} & \textbf{0.98} & 0.79\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+
+**add results for $N=1.1\times \max(n_i)$ simulations **
+
+\clearpage
