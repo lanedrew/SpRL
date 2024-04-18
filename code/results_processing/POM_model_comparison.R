@@ -19,13 +19,7 @@ library(RcppDist)
 library(terra)
 library(dplyr)
 library(data.table)
-# library(rstanarm)
-# library(bayesplot)
-# library(ggplot2)
-# library(patchwork)
-# library(GGally)
 library(purrr)
-# library(gtools)
 
 
 sourceCpp('./code/cpp_code/two_stage_func.cpp')

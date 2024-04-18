@@ -6,7 +6,6 @@
 # library(tidyverse)
 library(stringr)
 library(dplyr)
-library(gridExtra)
 library(gtools)
 library(latex2exp)
 library(ggpubr)

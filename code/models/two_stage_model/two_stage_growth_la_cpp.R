@@ -22,7 +22,6 @@ library(Rcpp)
 library(RcppArmadillo)
 library(RcppDist)
 library(terra)
-library(GreedyEPL) ## for linkage point estimate
 library(dplyr)
 
 
