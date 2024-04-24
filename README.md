@@ -8,7 +8,7 @@ The folders contained in this appendix are:
 3. 3_figures_and_tables
 4. resources
 
-The folders and code within each folder are provided in the order they should be run. The resources folder contains supporting code and a placeholder folder for the empirical data used in this analysis.
+The folders and code within each folder are provided in the order they should be run. The resources folder contains supporting code (R, C++, STAN) and a placeholder folder for the empirical data used in this analysis.
 
 ## Dependencies
 
