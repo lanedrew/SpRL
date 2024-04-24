@@ -1,0 +1,2 @@
+# Supporting Code
+This folder contains the supporting R, C++, and STAN code used in the simulation study and empirical analysis. No code needs to be run explicitly as it is called in other scripts when needed.
