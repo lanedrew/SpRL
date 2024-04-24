@@ -3,7 +3,9 @@
 .RData
 .Ruserdata
 
-/resources/empirical_data/
+/resources/empirical_data/*.csv
+/resources/empirical_data/*.tif
+/resources/empirical_data/UER_lidar_canopy_segmentation
 /1_simulation_study/simulated_data
 
 
