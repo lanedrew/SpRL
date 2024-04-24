@@ -1,5 +1,14 @@
-# SpRL
-Record linkage model for spatial location data with applications to multi-temporal LiDAR derived data in tree demography.
+# SpRL-Code
+This appendix contains the code for the paper "A Bayesian Record Linkage Approach to Tree Demography Using Overlapping LiDAR Scans".
+
+The folders contained in this appendix are:
+
+1. 1_simulation_study
+2. 2_empirical_analysis
+3. 3_figures_and_tables
+4. resources
+
+The folders and code within each folder are provided in the order they should be run. The resources folder contains supporting code and a placeholder folder for the empirical data used in this analysis.
 
 ## Dependencies
 

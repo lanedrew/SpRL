@@ -3,8 +3,9 @@
 .RData
 .Ruserdata
 
-/empirical_data/
-/code/simulation_results/
+/resources/empirical_data
+/1_simulation_study/simulated_data
+
 
 # tex
 *.log
