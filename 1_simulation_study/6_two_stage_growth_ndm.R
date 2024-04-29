@@ -1,5 +1,8 @@
-# pass from command line ----
-# Rscript code/scripts/r/SpRL_sim_study.R
+#####################################################################################
+#### This script runs the growth model using NDM linkage on a simulated dataset. ####
+#####################################################################################
+
+# Arguments from command line ----
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args) != 4) stop("Pass in density (low or med or high), noise (small or medium or large),
                             alpha (1 or 2 or 3), and index (integer from 1 to 100).", call.=FALSE)
@@ -7,7 +10,7 @@ if (!(args[1] %in% c("low", "med", "high"))) stop("Pass in the density (low or m
 if (!(args[2] %in% c("small", "medium", "large"))) stop("Pass in the noise level (small or medium or large)", call.=FALSE)
 
 ## Load libraries ----
-library(readr) ## load and save results
+library(readr)
 library(codetools)
 library(Rcpp)
 library(RcppDist)
@@ -18,17 +21,19 @@ library(mvtnorm)
 library(data.table)
 library(rstan)
 
+## Optional parallelization for rstan
 rstan_options(auto_write = FALSE)
 options(mc.cores = parallel::detectCores())
 
-sourceCpp('./code/cpp_code/two_stage_func.cpp')
-sourceCpp('./code/cpp_code/eval_links.cpp')
+## Source necessary C++ helper functions
+sourceCpp('./resources/code/cpp_code/two_stage_func.cpp')
+sourceCpp('./resources/code/cpp_code/eval_links.cpp')
 
 ## Read in the raster data for the covariates of interest
-slope.rast <- rast('./data/Snodgrass_slope_1m.tif')
-southness.rast <- rast('./data/Snodgrass_aspect_southness_1m.tif')
-wetness.rast <- rast('./data/Snodgrass_wetness_index_1m.tif')
-DEM.rast <- rast('./data/Snodgrass_DEM_1m.tif')
+slope.rast <- rast('./resources/empirical_data/Snodgrass_slope_1m.tif')
+southness.rast <- rast('./resources/empirical_data/Snodgrass_aspect_southness_1m.tif')
+wetness.rast <- rast('./resources/empirical_data/Snodgrass_wetness_index_1m.tif')
+DEM.rast <- rast('./resources/empirical_data/Snodgrass_DEM_1m.tif')
 
 ## Set seed for reproducibility ----
 set.seed(90210)
@@ -44,35 +49,25 @@ index <- args[4]
 print(paste0("NDM Density: ", density, ", Noise: ", noise, ", Alpha: ", alpha, ", Index: ", index))
 
 ## Read in the specified dataset
-filename <- paste0("./code/growth_sim_data_F23/", density, "_dens_", noise, "_noise_", alpha, "_alpha_sim_", index, ".csv")
+filename <- paste0("./1_simulation_study/simulated_data/", density, "_dens_", noise, "_noise_", alpha, "_alpha_sim_", index, ".csv")
 scan_data <- read_csv(filename)
 scan_data <- scan_data %>% filter(!file == 0)
 
 file1_mat <- scan_data %>% filter(file == 1) %>% select(x, y) %>% as.matrix()
 file2_mat <- scan_data %>% filter(file == 2) %>% select(x, y) %>% as.matrix()
 
+## Obtain the nearest distance matching linkage for the dataset
 lambda <- nearest_distance_matching(file_1 = file1_mat, file_2 = file2_mat, dist = 2)
 
-linkage_file <- paste0("./code/growth_sim_results/NDM/linkage/", density, "_dens_", noise, "_noise_", alpha, "_alpha_sim_", index, "_NDM_linkage_results.csv")
+## Save the linkage and process the linkage performance
+linkage_file <- paste0("./1_simulation_study/simulation_results/NDM/linkage/", density, "_dens_", noise, "_noise_", alpha, "_alpha_sim_", index, "_NDM_linkage_results.csv")
 write_csv(as.data.frame(lambda), linkage_file)
 
 linkage_res <- do.call(cbind, eval_links(z = t(lambda), true_id = scan_data$id))
 write_csv(as.data.frame(linkage_res),
-          paste0("./code/growth_sim_results/NDM/linkage_processed/",
+          paste0("./1_simulation_study/simulation_results/NDM/linkage_processed/",
                  density, "_density_", noise, "_noise_", alpha, "_alpha_", index,
                  "_index_NDM_linkage_metrics.csv"))
-
-
-## Obtain the file sizes and cumulative index m
-# file_size <- scan_data %>% 
-#   dplyr::select(file) %>%
-#   dplyr::group_by(file) %>%
-#   dplyr::summarise(n_i = n()) %>%
-#   dplyr::select(n_i)
-# file_size <- unlist(file_size)
-# 
-# N <- floor(1.1*max(file_size))
-
 
 ## Specify the limits of the spatial domains given the specified density
 if(density == "low"){
@@ -235,7 +230,7 @@ stan_growth_data_2stage = list(N = length(G[gc_index]), # Number of Obs
                                b_alpha = 5)  
 
 
-stanfit_2stage <- stan(file = "./code/STAN_models/STAN_growth_mod_alpha.stan", # Stan file
+stanfit_2stage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_alpha.stan", # Stan file
                        data = stan_growth_data_2stage, # Data
                        warmup = 10000, # Number of iteration to burn-in
                        iter = 25000, # Total number of iterations
@@ -245,6 +240,7 @@ stanfit_2stage <- stan(file = "./code/STAN_models/STAN_growth_mod_alpha.stan", #
 growth_results <- rstan::extract(stanfit_2stage, permuted = TRUE)
 growth_results <- as.data.frame(growth_results)
 
-ndm_results_file <- paste0("./code/growth_sim_results/NDM/growth_model_ests/", density, "_density_", noise, "_noise_", alpha, "_alpha_sim_", index, "_growth_results_NDM.csv")
-
+## Save the results
+ndm_results_file <- paste0("./1_simulation_study/simulation_results/NDM/growth_model_estimates/", density, "_density_", noise, "_noise_",
+                           alpha, "_alpha_sim_", index, "_growth_results_NDM.csv")
 write_csv(growth_results, file = ndm_results_file)

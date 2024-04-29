@@ -1,14 +1,20 @@
-#### Define all functions used in the data simulation function####
+################################################################################################
+#### This script contains the support functions for the function to generate simulated data ####
+#### contained in the script simulate_data_size_pred.R.                                      ####
+################################################################################################
 
-## Load necessary packages for the functions below
-library(tidyr) ## data manip
+## Load necessary packages
+library(tidyr)
 library(Matrix)
 library(ggplot2)
+
+### Define all supporting functions used in the data simulation function ####
 
 ## Function to find distance between points
 pq.dist <- function(p, q){
   sqrt((q[1] - p[1])^2 + (q[2] - p[2])^2)
 }
+
 
 ## Function to find the angle between two points
 pq.angle <- function(p, q){
@@ -75,56 +81,15 @@ recruit.parent.dists <- function(i, j, recruits, parents) {
 }
 
 
-
-## Function to estimate annual growth for a set of points given size and covariates
-# growth <- function(betas, b, tau2, covars, size){
-#   
-#   a <- c(covars%*%as.matrix(betas))
-#   mu <- (a*size)/(size + b)
-#   
-#   growth.update <- rnorm(length(size), mean = mu, sd = sqrt(tau2)) + size
-#   
-#   if(any(growth.update < 0)){
-#     growth.update[which(growth.update < 0)] <- 0
-#   }
-#   if(any(mu == 0)){
-#     growth.update[which(mu == 0)] <- 0
-#   }
-#   
-#   return(growth.update)
-# }
-# growth <- function(betas, b, tau2, covars, size, size_threshold, N_obs){
-#   
-#   a <- c(covars%*%as.matrix(betas))
-#   mu <- (a*size)/(size + b)
-#   
-#   parent_sizes <- size[1:N_obs]
-#   recruit_sizes <- size[-c(1:N_obs)]
-#   growth_update_parents <- rnorm(length(parent_sizes), mean = mu[1:N_obs], sd = sqrt(tau2)) + parent_sizes
-#   growth_update_recruits <- mu[-c(1:N_obs)] + recruit_sizes
-#   growth.update <- c(growth_update_parents, growth_update_recruits)
-#   if(any(growth.update < 0)){
-#     growth.update[which(growth.update < 0)] <- 0
-#   }
-# 
-#   
-#   return(growth.update)
-# }
-
 growth <- function(betas, b, tau2, covars, size, size_threshold, N_obs){
   
   a <- c(covars%*%as.matrix(betas))
   mu <- (a*size)/(size + b)
   
   parent_sizes <- size[1:N_obs]
-  # recruit_sizes <- size[-c(1:N_obs)]
   parents_growth <- rnorm(length(parent_sizes), mean = mu[1:N_obs], sd = sqrt(tau2))
   recruits_growth <- mu[-c(1:N_obs)]
   growth_update <- c(parents_growth, recruits_growth)
-  # if(any(growth.update < 0)){
-  #   growth.update[which(growth.update < 0)] <- 0
-  # }
-  
   
   return(growth_update)
 }
@@ -148,25 +113,6 @@ mortality <- function(n.cycles, phi, eta, gammas, covars, size.t1, size.t2){
 
 
 ## Function to estimate yearly cycle of growth and mortality
-# growth.mortality.cycle <- function(n.cycles, betas, b, tau2, phi, eta, gammas, id, covars, size, size_threshold, N_obs){
-#   
-#   ## Estimate the growth for points that survived
-#   size.year <- list()
-#   size.year[[1]] <- size
-#   for(i in 1:n.cycles){
-#     # size.year[[i+1]] <- growth(betas = betas, b = b, tau2 = tau2, covars = covars, size = size.year[[i]])
-#     size.year[[i+1]] <- growth(betas = betas, b = b, tau2 = tau2, covars = covars, size = size.year[[i]], size_threshold = size_threshold, N_obs = N_obs)
-#   }
-#   
-#   size.t1 <- size
-#   size.t2 <- size.year[[n.cycles + 1]]
-#   est.growth <- size.t2 - size.t1
-#   
-#   ## Estimate the mortality for a given set of points
-#   est.mort <- mortality(n.cycles = n.cycles, phi = phi, eta = eta, gammas = gammas, covars = covars, size.t1 = size.t1, size.t2 = size.t2)
-#   
-#   return(list(size.t2, est.growth, est.mort))
-# }
 growth.mortality.cycle <- function(n.cycles, betas, b, tau2, phi, eta, gammas, id, covars, size, size_threshold, N_obs){
   
   ## Estimate the growth for points that survived
@@ -174,7 +120,6 @@ growth.mortality.cycle <- function(n.cycles, betas, b, tau2, phi, eta, gammas, i
   observed_growth <- list()
   size_year[[1]] <- size
   for(i in seq_len(n.cycles)){
-    # size.year[[i+1]] <- growth(betas = betas, b = b, tau2 = tau2, covars = covars, size = size.year[[i]])
     observed_growth[[i]] <- growth(betas = betas, b = b, tau2 = tau2, covars = covars,
                                    size = size_year[[i]], size_threshold = size_threshold,
                                    N_obs = N_obs)
@@ -207,6 +152,7 @@ plot_data <- function(plot.data, overlap){
                         ", overlap %=", overlap))
 }
 
+
 ## Define a function to plot the full simulated data
 plot_data_full <- function(plot.data, overlap){
   ggplot(data = plot.data[[3]], aes(x = x, y = y, group = id)) +
@@ -221,6 +167,7 @@ plot_data_full <- function(plot.data, overlap){
                         ", noise=",plot.data[[2]][6],
                         ", overlap %=", overlap))
 }
+
 
 ## Define a function to plot the observed simulated data
 plot_data_obs <- function(plot.data, overlap){

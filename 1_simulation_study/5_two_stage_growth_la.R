@@ -1,9 +1,8 @@
-#########################################################################################################
-#### This script runs the growth portion of the two-stage model for the spatial record linkage model ####
-#########################################################################################################
+############################################################################################
+#### This script runs the growth portion of the two-stage model on a simulated dataset. ####
+############################################################################################
 
-# pass from command line ----
-# Rscript code/joint_growth_sim_study.R
+# Pass from command line ----
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args) != 6) stop("Pass in density (low or med or high), 
                             noise level (small or medium or large),
@@ -16,25 +15,26 @@ if (!(args[2] %in% c("small", "medium", "large"))) stop("Pass in the noise level
 
 
 ## Load libraries and sampler functions ----
-library(rstan) ## for growth model fit
-library(readr) ## load and save results
+library(rstan) 
+library(readr) 
 library(Rcpp)
 library(RcppArmadillo)
 library(RcppDist)
 library(terra)
 library(dplyr)
 
-
-sourceCpp('./code/cpp_code/two_stage_func.cpp')
+## Optional parallelization for rstan
 rstan_options(auto_write = FALSE)
 options(mc.cores = parallel::detectCores())
 
+## Source necessary C++ helper functions
+sourceCpp('./resources/code/cpp_code/two_stage_func.cpp')
 
 ## Read in the raster data for the covariates of interest
-slope.rast <- rast('./data/Snodgrass_slope_1m.tif')
-southness.rast <- rast('./data/Snodgrass_aspect_southness_1m.tif')
-wetness.rast <- rast('./data/Snodgrass_wetness_index_1m.tif')
-DEM.rast <- rast('./data/Snodgrass_DEM_1m.tif')
+slope.rast <- rast('./resources/empirical_data/Snodgrass_slope_1m.tif')
+southness.rast <- rast('./resources/empirical_data/Snodgrass_aspect_southness_1m.tif')
+wetness.rast <- rast('./resources/empirical_data/Snodgrass_wetness_index_1m.tif')
+DEM.rast <- rast('./resources/empirical_data/Snodgrass_DEM_1m.tif')
 
 ## Set seed for reproducibility ----
 set.seed(90210)
@@ -83,39 +83,32 @@ rm(southness.rast, slope.rast, wetness.rast, DEM.rast)
 
 
 if(N_threshold == "10"){
-  linkage_file <- paste0("./code/growth_sim_results/two_stage/linkage/", density, "_density_", noise, "_noise_",
+  linkage_file <- paste0("./1_simulation_study/simulation_results/two_stage/linkage/", density, "_density_", noise, "_noise_",
                          alpha, "_alpha_", index, "_index_two_stage_linkage_results.csv")
-  latent_file <- paste0("./code/growth_sim_results/two_stage/raw_data/", density, "_density_", noise, "_noise_",
+  latent_file <- paste0("./1_simulation_study/simulation_results/two_stage/raw_data/", density, "_density_", noise, "_noise_",
                         alpha, "_alpha_", index, "_index_two_stage_raw_data.RDS")
 }else if(N_threshold == "25"){
-  linkage_file <- paste0("./code/growth_sim_results/two_stage/linkage/", density, "_density_", noise, "_noise_", alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_linkage_results.csv")
-  latent_file <- paste0("./code/growth_sim_results/two_stage/raw_data/", density, "_density_", noise, "_noise_", alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_raw_data.RDS")
+  linkage_file <- paste0("./1_simulation_study/simulation_results/two_stage/linkage/", density, "_density_", noise, "_noise_",
+                         alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_linkage_results.csv")
+  latent_file <- paste0("./1_simulation_study/simulation_results/two_stage/raw_data/", density, "_density_", noise, "_noise_",
+                        walpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_raw_data.RDS")
   
 }
-# linkage_file <- paste0("./code/growth_sim_results/two_stage/linkage/", density, "_density_", noise, "_noise_",
-#                        index, "_index_two_stage_linkage_results.csv")
-# latent_file <- paste0("./code/growth_sim_results/two_stage/raw_data/", density, "_density_", noise, "_noise_",
-#                       index, "_index_two_stage_raw_data.RDS")
-# linkage_file <- paste0("./code/growth_sim_results/two_stage/linkage/", density, "_density_", noise, "_noise_", alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_linkage_results.csv")
-# latent_file <- paste0("./code/growth_sim_results/two_stage/raw_data/", density, "_density_", noise, "_noise_", alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_raw_data.RDS")
 
-latent_index <- read_csv("./code/growth_sim_results/two_stage/LA_sim_sample_index.csv",
+latent_index <- read_csv("./1_simulation_study/LA_sim_sample_index.csv",
                          col_names = FALSE,
                          show_col_types = FALSE)
 
 linkage_sample <- read_csv(linkage_file, show_col_types = FALSE) %>% as.matrix()
 latent_sample <- read_rds(latent_file)
 
-
-# data_file <- paste0("./code/growth_sim_data_3/", density, "_dens_medium_noise_alpha_3_sim_", index, ".csv")
-data_file <- paste0("./code/growth_sim_data_F23/", density, "_dens_", noise,
+data_file <- paste0("./1_simulation_study/simulated_data/", density, "_dens_", noise,
                     "_noise_", alpha, "_alpha_sim_", index, ".csv")
 scan_data <- read_csv(data_file, show_col_types = FALSE)
 scan_data <- scan_data %>% filter(!file == 0)
 
 
 ## Obtain the thinned linkage and corresponding latents for the two-stage model
-# latent_index <- sample(1:nrow(linkage_sample), 100, replace = FALSE)
 if(linkage_set == "1"){
   lambda_configs <- linkage_sample[latent_index$X1[1:50],] + 1
   s_configs <- latent_sample[,,latent_index$X1[1:50]]
@@ -123,10 +116,7 @@ if(linkage_set == "1"){
   lambda_configs <- linkage_sample[latent_index$X1[51:100],] + 1
   s_configs <- latent_sample[,,latent_index$X1[51:100]]
 }
-# lambda_configs <- linkage_sample[latent_index,] + 1
-# s_configs <- latent_sample[,,latent_index]
 N <- dim(s_configs)[2]
-
 
 ## Create storage for two-stage growth model results
 growth_results <- list()
@@ -234,13 +224,7 @@ for(i in 1:nrow(lambda_configs)){
                                  a_alpha = 0,
                                  b_alpha = 5) 
   
-  # stanfit_2stage <- stan(file = "./code/STAN_models/STAN_growth_mod.stan", # Stan file
-  #                        data = stan_growth_data_2stage, # Data
-  #                        warmup = 10000, # Number of iteration to burn-in
-  #                        iter = 15000, # Total number of iterations
-  #                        chains = 4, # Number of chains to run
-  #                        thin = 10)
-  stanfit_2stage <- stan(file = "./code/STAN_models/STAN_growth_mod_alpha.stan", # Stan file
+  stanfit_2stage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_alpha.stan", # Stan file
                          data = stan_growth_data_2stage, # Data
                          warmup = 10000, # Number of iteration to burn-in
                          iter = 15000, # Total number of iterations
@@ -252,14 +236,12 @@ for(i in 1:nrow(lambda_configs)){
   
 }
 
+## Collate the results together from the different growth model fits
 growth_results <- do.call(rbind, growth_results)
 growth_results <- as.data.frame(growth_results)
 
-
 ## Save the results
-# la_results_file <- paste0("./code/growth_sim_results/two_stage/linkage_avg/", density, "_density_", noise, "_noise_", index, "_growth_results_linkage_avg.csv")
-# la_results_file <- paste0("./code/growth_sim_results/two_stage/linkage_avg/", density, "_density_", noise, "_noise_", alpha, "_alpha_sim_", index, "_growth_results_linkage_avg.csv")
-la_results_file <- paste0("./code/growth_sim_results/two_stage/linkage_avg/", density, "_density_", noise, "_noise_", alpha, "_alpha_sim_", index, "_index_", linkage_set, "_set_", N_threshold, "_N_thresh_growth_results_linkage_avg.csv")
-
-
+la_results_file <- paste0("./1_simulation_study/simulation_results/two_stage/linkage_avg/", density, "_density_", noise, "_noise_",
+                          alpha, "_alpha_sim_", index, "_index_", linkage_set, "_set_",
+                          N_threshold, "_N_thresh_growth_results_linkage_avg.csv")
 write_csv(as.data.frame(growth_results), file = la_results_file)

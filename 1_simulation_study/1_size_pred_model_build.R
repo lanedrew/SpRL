@@ -1,5 +1,10 @@
-library(tidyr) ## data manip
-library(readr) ## load and save results
+#######################################################################################################
+#### This script trains the gradient boosted machine models used in the data simulation algorithm. ####
+#######################################################################################################
+
+## Load the necessary packages
+library(tidyr) 
+library(readr)
 library(sf)
 library(terra)
 library(xgboost)
@@ -11,24 +16,26 @@ library(tune)
 library(workflows)
 library(yardstick)
 library(MASS)
-library(tmvtnorm) ## for generating tmvn random variables
-library(mvtnorm) ## for generating mvn random variables
-library(usedist) ## for working with distance objects
+library(tmvtnorm) 
+library(mvtnorm) 
+library(usedist)
 # speed up computation with parallel processing (optional)
 library(doParallel)
 all_cores <- parallel::detectCores(logical = FALSE)
 registerDoParallel(cores = all_cores)
 
 
-## Set seed for reproducibility ----
+## Set seed for reproducibility
 set.seed(90210)
-data2015 <- as_tibble(read.csv("./data/UER_lidar_canopy_segmentation/crown_attributes_2015.csv"))
+
+## Load the empirical training data
+data2015 <- read_csv("./resources/empirical_data/UER_lidar_canopy_segmentation/crown_attributes_2015.csv")
 
 ## Read in the raster data for the covariates of interest
-southness.rast <- scale(rast('./data/Snodgrass_aspect_southness_1m.tif'))
-wetness.rast <- scale(rast('./data/Snodgrass_wetness_index_1m.tif'))
-spp.rast <- scale(rast('./data/Snodgrass_Snowpack_Persistence_DOY_2013_2019.tif'))
-gdd.rast <- scale(rast('./data/Snodgrass_Degree_Days_2013_2019.tif'))
+slope.rast <- rast('./resources/empirical_data/Snodgrass_slope_1m.tif')
+southness.rast <- rast('./resources/empirical_data/Snodgrass_aspect_southness_1m.tif')
+wetness.rast <- rast('./resources/empirical_data/Snodgrass_wetness_index_1m.tif')
+DEM.rast <- rast('./resources/empirical_data/Snodgrass_DEM_1m.tif')
 
 ## Creates a pseudo-mortality variable
 data2015$deltaPropCANVOL <- (data2015$CANVOL2019 - data2015$CANVOL2015) / (data2015$CANVOL2015)
@@ -36,7 +43,9 @@ data2015$mortCANVOL <- as.numeric(data2015$deltaPropCANVOL < -0.2)
 data2015$estGROWTH <- (data2015$CANVOL2019 - data2015$CANVOL2015)/4
 
 
-## High density model build
+#### High density model build ####
+
+## Specify the bounds for the high density subset
 a_x <- 327096
 a_y <- 4311239
 b_x <- 327196
@@ -47,50 +56,37 @@ a_y_exp <- a_y - 15
 b_x_exp <- b_x + 15
 b_y_exp <- b_y + 15
 
-south.high <- crop(southness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-wetness.high <- crop(wetness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-gdd.high <- lapply(gdd.rast, crop, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-spp.high <- lapply(spp.rast, crop, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-raster_list <- c(list(south.high), list(wetness.high), gdd.high, spp.high)
+## Crop and scale the raster images over the expanded spatial domain
+south.high <- scale(crop(southness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
+slope.high <- scale(crop(slope.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
+wetness.high <- scale(crop(wetness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
+DEM.high <- scale(crop(DEM.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
 
+## Create a filter for conifers within the expanded spatial domain and subset the data
 high.dens.filter <- which(a_x_exp < data2015$XTOP & data2015$XTOP < b_x_exp & a_y_exp < data2015$YTOP & data2015$YTOP < b_y_exp & data2015$LCmajority == 1)
 data2015_sample.high <- data2015[high.dens.filter,]
 
 
 ## Sample the covariate values for the latents and recruits
 s.high <- cbind(data2015_sample.high$XTOP, data2015_sample.high$YTOP)
-# covars.2015.high <- cbind(terra::extract(south.high, vect(s.high), method = "bilinear", ID = FALSE),
-#                           terra::extract(slope.high, vect(s.high), method = "bilinear", ID = FALSE),
-#                           terra::extract(wetness.high, vect(s.high), method = "bilinear", ID = FALSE),
-#                           terra::extract(DEM.high, vect(s.high), method = "bilinear", ID = FALSE))
-scaled.covars.2015.high <- update_covars_arma(s.high, raster_list)
+covars.2015.high <- cbind(terra::extract(south.high, vect(s.high), method = "bilinear", ID = FALSE),
+                          terra::extract(slope.high, vect(s.high), method = "bilinear", ID = FALSE),
+                          terra::extract(wetness.high, vect(s.high), method = "bilinear", ID = FALSE),
+                          terra::extract(DEM.high, vect(s.high), method = "bilinear", ID = FALSE))
+scaled.covars.2015.high <- cbind(rep(1, nrow(s.high)), covars.2015.high)
 
 
 #### Run the sampler and obtain the results ####
 H <- data2015_sample.high$ZTOP
 S.1 <- data2015_sample.high$CANVOL2015
-X <- as.data.frame(scaled.covars.2015.high[,-1])
-names(X) <- c("south", "wet", "gdd_2013", "gdd_2014", "gdd_2015", "gdd_2016", "gdd_2017", "gdd_2018", "gdd_2019",
-              "spp_2013", "spp_2014", "spp_2015", "spp_2016", "spp_2017", "spp_2018", "spp_2019")
+X <- covars.2015.high
 xy <- as.matrix(cbind(data2015_sample.high$XTOP, data2015_sample.high$YTOP))
 
 ## Obtain pseudo-spatial covariates
 X$south.nbr <- rep(NA, nrow(X))
+X$slope.nbr <- rep(NA, nrow(X))
 X$wet.nbr <- rep(NA, nrow(X))
-X$gdd_2013.nbr <- rep(NA, nrow(X))
-X$gdd_2014.nbr <- rep(NA, nrow(X))
-X$gdd_2015.nbr <- rep(NA, nrow(X))
-X$gdd_2016.nbr <- rep(NA, nrow(X))
-X$gdd_2017.nbr <- rep(NA, nrow(X))
-X$gdd_2018.nbr <- rep(NA, nrow(X))
-X$gdd_2019.nbr <- rep(NA, nrow(X))
-X$spp_2013.nbr <- rep(NA, nrow(X))
-X$spp_2014.nbr <- rep(NA, nrow(X))
-X$spp_2015.nbr <- rep(NA, nrow(X))
-X$spp_2016.nbr <- rep(NA, nrow(X))
-X$spp_2017.nbr <- rep(NA, nrow(X))
-X$spp_2018.nbr <- rep(NA, nrow(X))
-X$spp_2019.nbr <- rep(NA, nrow(X))
+X$DEM.nbr <- rep(NA, nrow(X))
 X$near.nbr.dist <- rep(NA, nrow(X))
 X$near.nbr.num <- rep(NA, nrow(X))
 X$avg.nbr.dist.15 <- rep(NA, nrow(X))
@@ -106,22 +102,10 @@ distance.matrix <- as.matrix(dist(xy, method = "euclidean"))
 for(i in 1:nrow(X)){
   close.points.15 <- unique(which(distance.matrix[i,] < 15 & distance.matrix[i,] != 0))
   close.sizes.15 <- S.1[close.points.15]
-  X$south.nbr[i] <- sum(X$south[close.points.15])
-  X$wet.nbr[i] <- sum(X$wet[close.points.15])
-  X$gdd_2013.nbr[i] <- sum(X$gdd_2013[close.points.15])
-  X$gdd_2014.nbr[i] <- sum(X$gdd_2014[close.points.15])
-  X$gdd_2015.nbr[i] <- sum(X$gdd_2015[close.points.15])
-  X$gdd_2016.nbr[i] <- sum(X$gdd_2016[close.points.15])
-  X$gdd_2017.nbr[i] <- sum(X$gdd_2017[close.points.15])
-  X$gdd_2018.nbr[i] <- sum(X$gdd_2018[close.points.15])
-  X$gdd_2019.nbr[i] <- sum(X$gdd_2019[close.points.15])
-  X$spp_2013.nbr[i] <- sum(X$spp_2013[close.points.15])
-  X$spp_2014.nbr[i] <- sum(X$spp_2014[close.points.15])
-  X$spp_2015.nbr[i] <- sum(X$spp_2015[close.points.15])
-  X$spp_2016.nbr[i] <- sum(X$spp_2016[close.points.15])
-  X$spp_2017.nbr[i] <- sum(X$spp_2017[close.points.15])
-  X$spp_2018.nbr[i] <- sum(X$spp_2018[close.points.15])
-  X$spp_2019.nbr[i] <- sum(X$spp_2019[close.points.15])
+  X$south.nbr[i] <- sum(X$Snodgrass_aspect_southness_1m[close.points.15])
+  X$slope.nbr[i] <- sum(X$Snodgrass_slope_1m[close.points.15])
+  X$wet.nbr[i] <- sum(X$Snodgrass_wetness_index_1m[close.points.15])
+  X$DEM.nbr[i] <- sum(X$Snodgrass_DEM_1m[close.points.15])
   X$near.nbr.dist[i] <- min(distance.matrix[i,][-i])
   X$near.nbr.num[i] <- length(close.points.15)
   X$avg.nbr.dist.15[i] <- mean(distance.matrix[i,][close.points.15])
@@ -141,7 +125,7 @@ red.index <- which(a_x < X$x & b_x > X$x & a_y < X$y & b_y > X$y)
 X.red <- X[red.index,]
 
 
-## Fit the size model based on predicted heights
+## Fit the size model
 mod.data.size <- data.frame(size = S.1[red.index], X.red)
 
 sprl_split <- rsample::initial_split(
@@ -152,12 +136,8 @@ sprl_split <- rsample::initial_split(
 
 preprocessing_recipe <- 
   recipes::recipe(size ~ ., data = training(sprl_split)) %>%
-  # convert categorical variables to factors
   recipes::step_string2factor(all_nominal()) %>%
-  # combine low frequency factor levels
   recipes::step_other(all_nominal(), threshold = 0.01) %>%
-  # remove no variance predictors which provide no predictive information 
-  # recipes::step_nzv(all_nominal()) %>%
   prep()
 
 
@@ -220,7 +200,6 @@ train_prediction <- xgboost_model_final %>%
     formula = size ~ ., 
     data    = train_processed
   ) %>%
-  # predict the sale prices for the training data
   predict(new_data = train_processed) %>%
   bind_cols(training(sprl_split))
 
@@ -268,14 +247,13 @@ xgboost_score <-
   mutate(.estimate = format(round(.estimate, 2), big.mark = ","))
 knitr::kable(xgboost_score)
 
-save(size.mod, file = './code/data_simulation/size_models/high_dens_size_mod2.RData')
+## Save the generated model
+save(size.mod, file = './1_simulation_study/size_models/high_dens_size_mod.RData')
 
 
+#### Medium density model build ####
 
-
-
-## Medium density model build
-
+## Specify the bounds for the medium density subset
 a_x <- 326996
 a_y <- 4311239
 b_x <- 327096
@@ -286,42 +264,36 @@ a_y_exp <- a_y - 15
 b_x_exp <- b_x + 15
 b_y_exp <- b_y + 15
 
-south.med <- crop(southness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-wetness.med <- crop(wetness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-gdd.med <- lapply(gdd.rast, crop, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-spp.med <- lapply(spp.rast, crop, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-raster_list <- c(list(south.med), list(wetness.med), gdd.med, spp.med)
+## Crop and scale the raster images over the expanded spatial domain
+south.med <- scale(crop(southness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
+slope.med <- scale(crop(slope.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
+wetness.med <- scale(crop(wetness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
+DEM.med <- scale(crop(DEM.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
 
+## Create a filter for conifers within the expanded spatial domain and subset the data
 med.dens.filter <- which(a_x_exp < data2015$XTOP & data2015$XTOP < b_x_exp & a_y_exp < data2015$YTOP & data2015$YTOP < b_y_exp & data2015$LCmajority == 1)
 data2015_sample.med <- data2015[med.dens.filter,]
 
+## Sample the covariate values for the latents and recruits
 s.med <- cbind(data2015_sample.med$XTOP, data2015_sample.med$YTOP)
-scaled.covars.2015.med <- update_covars_arma(s.med, raster_list)
+covars.2015.med <- cbind(extract(south.med, vect(s.med), method = "bilinear", ID = FALSE),
+                         extract(slope.med, vect(s.med), method = "bilinear", ID = FALSE),
+                         extract(wetness.med, vect(s.med), method = "bilinear", ID = FALSE),
+                         extract(DEM.med, vect(s.med), method = "bilinear", ID = FALSE))
+scaled.covars.2015.med <- cbind(rep(1, nrow(s.med)), covars.2015.med)
 
+
+#### Run the sampler and obtain the results ####
 H <- data2015_sample.med$ZTOP
 S.1 <- data2015_sample.med$CANVOL2015
-X <- as.data.frame(scaled.covars.2015.med[,-1])
-names(X) <- c("south", "wet", "gdd_2013", "gdd_2014", "gdd_2015", "gdd_2016", "gdd_2017", "gdd_2018", "gdd_2019",
-              "spp_2013", "spp_2014", "spp_2015", "spp_2016", "spp_2017", "spp_2018", "spp_2019")
+X <- covars.2015.med
 xy <- as.matrix(cbind(data2015_sample.med$XTOP, data2015_sample.med$YTOP))
 
 ## Obtain pseudo-spatial covariates
 X$south.nbr <- rep(NA, nrow(X))
+X$slope.nbr <- rep(NA, nrow(X))
 X$wet.nbr <- rep(NA, nrow(X))
-X$gdd_2013.nbr <- rep(NA, nrow(X))
-X$gdd_2014.nbr <- rep(NA, nrow(X))
-X$gdd_2015.nbr <- rep(NA, nrow(X))
-X$gdd_2016.nbr <- rep(NA, nrow(X))
-X$gdd_2017.nbr <- rep(NA, nrow(X))
-X$gdd_2018.nbr <- rep(NA, nrow(X))
-X$gdd_2019.nbr <- rep(NA, nrow(X))
-X$spp_2013.nbr <- rep(NA, nrow(X))
-X$spp_2014.nbr <- rep(NA, nrow(X))
-X$spp_2015.nbr <- rep(NA, nrow(X))
-X$spp_2016.nbr <- rep(NA, nrow(X))
-X$spp_2017.nbr <- rep(NA, nrow(X))
-X$spp_2018.nbr <- rep(NA, nrow(X))
-X$spp_2019.nbr <- rep(NA, nrow(X))
+X$DEM.nbr <- rep(NA, nrow(X))
 X$near.nbr.dist <- rep(NA, nrow(X))
 X$near.nbr.num <- rep(NA, nrow(X))
 X$avg.nbr.dist.15 <- rep(NA, nrow(X))
@@ -337,22 +309,10 @@ distance.matrix <- as.matrix(dist(xy, method = "euclidean"))
 for(i in 1:nrow(X)){
   close.points.15 <- unique(which(distance.matrix[i,] < 15 & distance.matrix[i,] != 0))
   close.sizes.15 <- S.1[close.points.15]
-  X$south.nbr[i] <- sum(X$south[close.points.15])
-  X$wet.nbr[i] <- sum(X$wet[close.points.15])
-  X$gdd_2013.nbr[i] <- sum(X$gdd_2013[close.points.15])
-  X$gdd_2014.nbr[i] <- sum(X$gdd_2014[close.points.15])
-  X$gdd_2015.nbr[i] <- sum(X$gdd_2015[close.points.15])
-  X$gdd_2016.nbr[i] <- sum(X$gdd_2016[close.points.15])
-  X$gdd_2017.nbr[i] <- sum(X$gdd_2017[close.points.15])
-  X$gdd_2018.nbr[i] <- sum(X$gdd_2018[close.points.15])
-  X$gdd_2019.nbr[i] <- sum(X$gdd_2019[close.points.15])
-  X$spp_2013.nbr[i] <- sum(X$spp_2013[close.points.15])
-  X$spp_2014.nbr[i] <- sum(X$spp_2014[close.points.15])
-  X$spp_2015.nbr[i] <- sum(X$spp_2015[close.points.15])
-  X$spp_2016.nbr[i] <- sum(X$spp_2016[close.points.15])
-  X$spp_2017.nbr[i] <- sum(X$spp_2017[close.points.15])
-  X$spp_2018.nbr[i] <- sum(X$spp_2018[close.points.15])
-  X$spp_2019.nbr[i] <- sum(X$spp_2019[close.points.15])
+  X$south.nbr[i] <- sum(X$Snodgrass_aspect_southness_1m[close.points.15])
+  X$slope.nbr[i] <- sum(X$Snodgrass_slope_1m[close.points.15])
+  X$wet.nbr[i] <- sum(X$Snodgrass_wetness_index_1m[close.points.15])
+  X$DEM.nbr[i] <- sum(X$Snodgrass_DEM_1m[close.points.15])
   X$near.nbr.dist[i] <- min(distance.matrix[i,][-i])
   X$near.nbr.num[i] <- length(close.points.15)
   X$avg.nbr.dist.15[i] <- mean(distance.matrix[i,][close.points.15])
@@ -372,7 +332,7 @@ red.index <- which(a_x < X$x & b_x > X$x & a_y < X$y & b_y > X$y)
 X.red <- X[red.index,]
 
 
-## Fit the size model based on predicted heights
+## Fit the size model
 mod.data.size <- data.frame(size = S.1[red.index], X.red)
 
 sprl_split <- rsample::initial_split(
@@ -383,14 +343,9 @@ sprl_split <- rsample::initial_split(
 
 preprocessing_recipe <- 
   recipes::recipe(size ~ ., data = training(sprl_split)) %>%
-  # convert categorical variables to factors
   recipes::step_string2factor(all_nominal()) %>%
-  # combine low frequency factor levels
   recipes::step_other(all_nominal(), threshold = 0.01) %>%
-  # remove no variance predictors which provide no predictive information 
-  # recipes::step_nzv(all_nominal()) %>%
   prep()
-
 
 sprl_cv_folds <- 
   recipes::bake(
@@ -451,7 +406,6 @@ train_prediction <- xgboost_model_final %>%
     formula = size ~ ., 
     data    = train_processed
   ) %>%
-  # predict the sale prices for the training data
   predict(new_data = train_processed) %>%
   bind_cols(training(sprl_split))
 xgboost_score_train <- 
@@ -496,14 +450,13 @@ xgboost_score <-
   mutate(.estimate = format(round(.estimate, 2), big.mark = ","))
 knitr::kable(xgboost_score)
 
-save(size.mod, file = './code/data_simulation/size_models/med_dens_size_mod2.RData')
+## Save the generated model
+save(size.mod, file = './1_simulation_study/size_models/med_dens_size_mod.RData')
 
 
+#### Low density model build ####
 
-
-
-## Low density model build
-
+## Specify the bounds for the medium density subset
 a_x <- 326496
 a_y <- 4311439
 b_x <- 326596
@@ -514,43 +467,34 @@ a_y_exp <- a_y - 15
 b_x_exp <- b_x + 15
 b_y_exp <- b_y + 15
 
-south.low <- crop(southness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-wetness.low <- crop(wetness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-gdd.low <- lapply(gdd.rast, crop, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-spp.low <- lapply(spp.rast, crop, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp))
-raster_list <- c(list(south.low), list(wetness.low), gdd.low, spp.low)
+## Crop and scale the raster images over the expanded spatial domain
+south.low <- scale(crop(southness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
+slope.low <- scale(crop(slope.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
+wetness.low <- scale(crop(wetness.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
+DEM.low <- scale(crop(DEM.rast, ext(a_x_exp, b_x_exp, a_y_exp, b_y_exp)))
 
+## Create a filter for conifers within the expanded spatial domain and subset the data
 low.dens.filter <- which(a_x_exp < data2015$XTOP & data2015$XTOP < b_x_exp & a_y_exp < data2015$YTOP & data2015$YTOP < b_y_exp & data2015$LCmajority == 1)
 data2015_sample.low <- data2015[low.dens.filter,]
 
-# Sample the covariate values for the latents and recruits
+## Sample the covariate values for the latents and recruits
 s.low <- cbind(data2015_sample.low$XTOP, data2015_sample.low$YTOP)
-scaled.covars.2015.low <- update_covars_arma(s.low, raster_list)
+covars.2015.low <- cbind(extract(south.low, vect(s.low), method = "bilinear", ID = FALSE),
+                         extract(slope.low, vect(s.low), method = "bilinear", ID = FALSE),
+                         extract(wetness.low, vect(s.low), method = "bilinear", ID = FALSE),
+                         extract(DEM.low, vect(s.low), method = "bilinear", ID = FALSE))
 
+#### Run the sampler and obtain the results ####
 H <- data2015_sample.low$ZTOP
 S.1 <- data2015_sample.low$CANVOL2015
-X <- as.data.frame(scaled.covars.2015.low[,-1])
-names(X) <- c("south", "wet", "gdd_2013", "gdd_2014", "gdd_2015", "gdd_2016", "gdd_2017", "gdd_2018", "gdd_2019",
-              "spp_2013", "spp_2014", "spp_2015", "spp_2016", "spp_2017", "spp_2018", "spp_2019")
+X <- covars.2015.low
 xy <- as.matrix(cbind(data2015_sample.low$XTOP, data2015_sample.low$YTOP))
 
 ## Obtain pseudo-spatial covariates
 X$south.nbr <- rep(NA, nrow(X))
+X$slope.nbr <- rep(NA, nrow(X))
 X$wet.nbr <- rep(NA, nrow(X))
-X$gdd_2013.nbr <- rep(NA, nrow(X))
-X$gdd_2014.nbr <- rep(NA, nrow(X))
-X$gdd_2015.nbr <- rep(NA, nrow(X))
-X$gdd_2016.nbr <- rep(NA, nrow(X))
-X$gdd_2017.nbr <- rep(NA, nrow(X))
-X$gdd_2018.nbr <- rep(NA, nrow(X))
-X$gdd_2019.nbr <- rep(NA, nrow(X))
-X$spp_2013.nbr <- rep(NA, nrow(X))
-X$spp_2014.nbr <- rep(NA, nrow(X))
-X$spp_2015.nbr <- rep(NA, nrow(X))
-X$spp_2016.nbr <- rep(NA, nrow(X))
-X$spp_2017.nbr <- rep(NA, nrow(X))
-X$spp_2018.nbr <- rep(NA, nrow(X))
-X$spp_2019.nbr <- rep(NA, nrow(X))
+X$DEM.nbr <- rep(NA, nrow(X))
 X$near.nbr.dist <- rep(NA, nrow(X))
 X$near.nbr.num <- rep(NA, nrow(X))
 X$avg.nbr.dist.15 <- rep(NA, nrow(X))
@@ -566,22 +510,10 @@ distance.matrix <- as.matrix(dist(xy, method = "euclidean"))
 for(i in 1:nrow(X)){
   close.points.15 <- unique(which(distance.matrix[i,] < 15 & distance.matrix[i,] != 0))
   close.sizes.15 <- S.1[close.points.15]
-  X$south.nbr[i] <- sum(X$south[close.points.15])
-  X$wet.nbr[i] <- sum(X$wet[close.points.15])
-  X$gdd_2013.nbr[i] <- sum(X$gdd_2013[close.points.15])
-  X$gdd_2014.nbr[i] <- sum(X$gdd_2014[close.points.15])
-  X$gdd_2015.nbr[i] <- sum(X$gdd_2015[close.points.15])
-  X$gdd_2016.nbr[i] <- sum(X$gdd_2016[close.points.15])
-  X$gdd_2017.nbr[i] <- sum(X$gdd_2017[close.points.15])
-  X$gdd_2018.nbr[i] <- sum(X$gdd_2018[close.points.15])
-  X$gdd_2019.nbr[i] <- sum(X$gdd_2019[close.points.15])
-  X$spp_2013.nbr[i] <- sum(X$spp_2013[close.points.15])
-  X$spp_2014.nbr[i] <- sum(X$spp_2014[close.points.15])
-  X$spp_2015.nbr[i] <- sum(X$spp_2015[close.points.15])
-  X$spp_2016.nbr[i] <- sum(X$spp_2016[close.points.15])
-  X$spp_2017.nbr[i] <- sum(X$spp_2017[close.points.15])
-  X$spp_2018.nbr[i] <- sum(X$spp_2018[close.points.15])
-  X$spp_2019.nbr[i] <- sum(X$spp_2019[close.points.15])
+  X$south.nbr[i] <- sum(X$Snodgrass_aspect_southness_1m[close.points.15])
+  X$slope.nbr[i] <- sum(X$Snodgrass_slope_1m[close.points.15])
+  X$wet.nbr[i] <- sum(X$Snodgrass_wetness_index_1m[close.points.15])
+  X$DEM.nbr[i] <- sum(X$Snodgrass_DEM_1m[close.points.15])
   X$near.nbr.dist[i] <- min(distance.matrix[i,][-i])
   X$near.nbr.num[i] <- length(close.points.15)
   X$avg.nbr.dist.15[i] <- mean(distance.matrix[i,][close.points.15])
@@ -601,7 +533,7 @@ red.index <- which(a_x < X$x & b_x > X$x & a_y < X$y & b_y > X$y)
 X.red <- X[red.index,]
 
 
-## Fit the size model based on predicted heights
+## Fit the size model
 mod.data.size <- data.frame(size = S.1[red.index], X.red)
 
 sprl_split <- rsample::initial_split(
@@ -612,14 +544,9 @@ sprl_split <- rsample::initial_split(
 
 preprocessing_recipe <- 
   recipes::recipe(size ~ ., data = training(sprl_split)) %>%
-  # convert categorical variables to factors
   recipes::step_string2factor(all_nominal()) %>%
-  # combine low frequency factor levels
   recipes::step_other(all_nominal(), threshold = 0.01) %>%
-  # remove no variance predictors which provide no predictive information 
-  # recipes::step_nzv(all_nominal()) %>%
   prep()
-
 
 sprl_cv_folds <- 
   recipes::bake(
@@ -680,7 +607,6 @@ train_prediction <- xgboost_model_final %>%
     formula = size ~ ., 
     data    = train_processed
   ) %>%
-  # predict the sale prices for the training data
   predict(new_data = train_processed) %>%
   bind_cols(training(sprl_split))
 xgboost_score_train <- 
@@ -725,14 +651,15 @@ xgboost_score <-
   mutate(.estimate = format(round(.estimate, 2), big.mark = ","))
 knitr::kable(xgboost_score)
 
-save(size.mod, file = './code/data_simulation/size_models/low_dens_size_mod2.RData')
+## Save the generated model
+save(size.mod, file = './1_simulation_study/size_models/low_dens_size_mod.RData')
 
-
+#### Create and save interpoint interaction model using a cubic polynomial ####
 int.rad.mod <- lm(sqrt(data2015_sample.low$area/pi) ~ poly(CANVOL2015, 3), data = data2015_sample.low)
-save(int.rad.mod, file = './code/data_simulation/size_models/low_dens_int_rad.RData')
+save(int.rad.mod, file = './1_simulation_study/size_models/low_dens_int_rad.RData')
 
 int.rad.mod <- lm(sqrt(data2015_sample.med$area/pi) ~ poly(CANVOL2015, 3), data = data2015_sample.med)
-save(int.rad.mod, file = './code/data_simulation/size_models/med_dens_int_rad.RData')
+save(int.rad.mod, file = './1_simulation_study/size_models/med_dens_int_rad.RData')
 
 int.rad.mod <- lm(sqrt(data2015_sample.high$area/pi) ~ poly(CANVOL2015, 3), data = data2015_sample.high)
-save(int.rad.mod, file = './code/data_simulation/size_models/high_dens_int_rad.RData')
+save(int.rad.mod, file = './1_simulation_study/size_models/high_dens_int_rad.RData')

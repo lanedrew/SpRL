@@ -1,22 +1,27 @@
+#######################################################################
+#### This script contains the function to generate simulated data. ####
+#######################################################################
+
+
 ## Load the necessary data simulation and naive sampler functions
-source('./code/data_simulation/data_sim_functions.R')
-library(readr) ## load and save results
+library(readr) 
 library(terra)
 library(xgboost)
 library(parsnip)
-library(tmvtnorm) ## for generating tmvn random variables
+library(tmvtnorm) 
 library(spatstat)
 library(mvtnorm)
+source('./resources/code/R_code/data_simulation/data_sim_functions.R')
 
 ## Read in the raster data for the covariates of interest
-slope_rast <- rast('./data/Snodgrass_slope_1m.tif')
-southness_rast <- rast('./data/Snodgrass_aspect_southness_1m.tif')
-wetness_rast <- rast('./data/Snodgrass_wetness_index_1m.tif')
-DEM_rast <- rast('./data/Snodgrass_DEM_1m.tif')
+slope_rast <- rast('./resources/empirical_data/Snodgrass_slope_1m.tif')
+southness_rast <- rast('./resources/empirical_data/Snodgrass_aspect_southness_1m.tif')
+wetness_rast <- rast('./resources/empirical_data/Snodgrass_wetness_index_1m.tif')
+DEM_rast <- rast('./resources/empirical_data/Snodgrass_DEM_1m.tif')
 
 ## Define a function to simulate the data
 sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise = c("small", "medium", "large"),
-                     n.cycles, tau2, betas, b, phi = NULL, eta = NULL, gammas = NULL, alpha){
+                    tau2, betas, b, alpha){
   
   ## Define the spatial domain based on the density and relevant interaction radius and rate of decay for the marked point process
   if(density == "low"){
@@ -26,11 +31,11 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
     b_x <- 326596
     b_y <- 4311539
     
-    sizes_df <- as.data.frame(read_csv("./data/Expanded_Area_Data_SpRL/low_dens_data_exp.csv", show_col_types = FALSE))
+    sizes_df <- as.data.frame(read_csv("./1_simulation_study/size_models/low_dens_data_exp.csv", show_col_types = FALSE))
     sizes <- sizes_df$size
     
-    load('./code/data_simulation/size_models/low_dens_size_mod.RData')
-    load('./code/data_simulation/size_models/low_dens_int_rad.RData')
+    load('./1_simulation_study/size_models//low_dens_size_mod.RData')
+    load('./1_simulation_study/size_models//low_dens_int_rad.RData')
     
   }else if(density == "med"){
     
@@ -39,11 +44,11 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
     b_x <- 327096
     b_y <- 4311339
     
-    sizes_df <- as.data.frame(read_csv("./data/Expanded_Area_Data_SpRL/med_dens_data_exp_2.csv", show_col_types = FALSE))
+    sizes_df <- as.data.frame(read_csv("./1_simulation_study/size_models/med_dens_data_exp.csv", show_col_types = FALSE))
     sizes <- sizes_df$size
     
-    load('./code/data_simulation/size_models/med_dens_size_mod.RData')
-    load('./code/data_simulation/size_models/med_dens_int_rad.RData')
+    load('./1_simulation_study/size_models/med_dens_size_mod.RData')
+    load('./1_simulation_study/size_models/med_dens_int_rad.RData')
     
   }else if(density == "high"){
     
@@ -52,11 +57,11 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
     b_x <- 327196
     b_y <- 4311339
     
-    sizes_df <- as.data.frame(read_csv("./data/Expanded_Area_Data_SpRL/high_dens_data_exp_2.csv", show_col_types = FALSE))
+    sizes_df <- as.data.frame(read_csv("./1_simulation_study/size_models/high_dens_data_exp.csv", show_col_types = FALSE))
     sizes <- sizes_df$size
     
-    load('./code/data_simulation/size_models/high_dens_size_mod.RData')
-    load('./code/data_simulation/size_models/high_dens_int_rad.RData')
+    load('./1_simulation_study/size_models/high_dens_size_mod.RData')
+    load('./1_simulation_study/size_models/high_dens_int_rad.RData')
     
   }
   
@@ -92,9 +97,6 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
   t_list <- list()
   t_list[[1]] <- matrix(data = c(0,0), nrow = 1)
   t_list[[2]] <-  matrix(data = c(.025, .025), nrow = 1)
-  # for(i in 2:2){
-  #   t_list[[i]] <- matrix(data = rmvnorm(1, mean = c(0,0), sigma = diag(sigma2_t, 2)), nrow = 1)
-  # }
   
   ## Generate the rotation matrix given the rotation angle theta
   R_list <- list()
@@ -108,10 +110,6 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
   s <- matrix(c(runif(1, a_x_exp, b_x_exp), runif(1, a_y_exp, b_y_exp), rep(NA, (N_exp - 1)*2)), ncol=2, byrow = TRUE)  # x and y corresponding to M_n(t_0)
   s_sizes <- rep(NA, N_exp)
   int_rad <- rep(NA, N_exp)
-  # s_one_covars <- cbind(terra::extract(south, vect(s[1,, drop = FALSE]), method = "bilinear", ID = FALSE), 
-  #                       terra::extract(slope, vect(s[1,, drop = FALSE]), method = "bilinear", ID = FALSE),
-  #                       terra::extract(wetness, vect(s[1,, drop = FALSE]), method = "bilinear", ID = FALSE),
-  #                       terra::extract(DEM, vect(s[1,, drop = FALSE]), method = "bilinear", ID = FALSE))
   s_one_covars <- cbind(terra::extract(south, s[1,, drop = FALSE], method = "bilinear"), 
                         terra::extract(slope, s[1,, drop = FALSE], method = "bilinear"),
                         terra::extract(wetness, s[1,, drop = FALSE], method = "bilinear"),
@@ -148,10 +146,6 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
     while(is.na(s[i,1])){
       
       newp <- matrix(c(runif(1, a_x_exp, b_x_exp), runif(1, a_y_exp, b_y_exp)), nrow = 1)
-      # newp_covars <- cbind(terra::extract(south, vect(newp[1,, drop = FALSE]), method = "bilinear", ID = FALSE),
-      #                      terra::extract(slope, vect(newp[1,, drop = FALSE]), method = "bilinear", ID = FALSE),
-      #                      terra::extract(wetness, vect(newp[1,, drop = FALSE]), method = "bilinear", ID = FALSE),
-      #                      terra::extract(DEM, vect(newp[1,, drop = FALSE]), method = "bilinear", ID = FALSE))
       newp_covars <- cbind(terra::extract(south, newp[1,, drop = FALSE], method = "bilinear"),
                            terra::extract(slope, newp[1,, drop = FALSE], method = "bilinear"),
                            terra::extract(wetness, newp[1,, drop = FALSE], method = "bilinear"),
@@ -272,7 +266,6 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
   
   
   size_threshold <- min(sizes_order)
-  # recruit_sizes <- rbeta(nrow(selected_recruits), 1, 4.5)*size_threshold
   recruit_sizes <- rbeta(nrow(selected_recruits), 1, rs_b)*size_threshold
   
   
@@ -282,10 +275,6 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
   
   
   ## Sample the covariate values for the latents and recruits
-  # scaled_covars <- cbind(rep(1, nrow(s)), terra::extract(south, vect(s), method = "bilinear", ID = FALSE),
-  #                        terra::extract(slope, vect(s), method = "bilinear", ID = FALSE),
-  #                        terra::extract(wetness, vect(s), method = "bilinear", ID = FALSE),
-  #                        terra::extract(DEM, vect(s), method = "bilinear", ID = FALSE))
   scaled_covars <- cbind(rep(1, nrow(s)), terra::extract(south, s, method = "bilinear"),
                          terra::extract(slope, s, method = "bilinear"),
                          terra::extract(wetness, s, method = "bilinear"),
@@ -308,21 +297,11 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
   size_list[[2]] <- as.numeric(c(sizes_order, rev(sort(recruit_sizes))))
   lambda_list[[2]] <- seq_len(nrow(s))
   
-  # ## Run the annual growth/mortality algorithm for selected # of cycles
-  # one_cycle <- growth.mortality.cycle(n.cycles = n.cycles, betas = betas, b = b, tau2 = tau2, gammas = gammas, phi = phi, eta = eta,
-  #                                     id = lambda_list[[2]], covars = as.matrix(scaled_covars),
-  #                                     size = size_list[[2]], size_threshold = size_threshold, N_obs = N_obs)
-  # size_list[[3]] <- c(one_cycle[[1]])
   a <- c(as.matrix(scaled_covars)%*%as.matrix(betas))
   mu <- (a*(size_list[[2]]^alpha))/(size_list[[2]]^alpha + b^alpha)
-  # W <- diag(sizes_order)
   W <- diag(length(sizes_order))
   
-  # size_list[[3]] <- size_list[[2]] + c(rnorm(N, mu[1:N], sqrt(tau2)), rep(0, length(mu[-c(1:N)])))
-  # size_list[[3]] <- size_list[[2]] + c(rnorm(N, mu[1:N], sqrt(tau2)), (mu[-c(1:N)]))
   size_list[[3]] <- size_list[[2]] + c(rmvnorm(n = 1, mean = c(mu)[1:N], sigma = tau2*W), (mu[-c(1:N)]))
-  
-  
   
   
   ## Generate the observed point pattern for the second file:
@@ -330,41 +309,10 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
   ## if they exist across both files, a growth angle, and growth rate are determined based on neighboring points and size
   ## if they only exist in the second file, noise is added to the location
   ## all points in the second file are rotated and translated
-  # lambda_list[[3]] <- which(one_cycle[[1]] > 0)
   lambda_list[[3]] <- which(size_list[[3]] > size_threshold)
   lambda_2_index <- seq_len(length(lambda_list[[3]]))
   s_sizes_2 <- cbind(s[lambda_list[[3]],], size_list[[3]][lambda_list[[3]]])
   X <- matrix(NA, nrow = length(lambda_list[[3]]), ncol = 2)
-  # for(j in 1:length(lambda_list[[3]])){
-  #   if(any(lambda_list[[1]] == lambda_list[[3]][j])){
-  #     close_points <- neighbors(s_sizes_2[lambda_2_index[j],], s_sizes_2[-lambda_2_index[j],])
-  #     if(any(close_points > 0)){
-  #       if(which.max(close_points) == 1){
-  #         angle <- runif(1, pi, (4/3)*pi)
-  #       }else if(which.max(close_points) == 2){
-  #         angle <- runif(1, (4/3)*pi, (5/3)*pi)
-  #       }else if(which.max(close_points) == 3){
-  #         angle <- runif(1, (5/3)*pi, 2*pi)
-  #       }else if(which.max(close_points) == 4){
-  #         angle <- runif(1, 0, pi/3)
-  #       }else if(which.max(close_points) == 5){
-  #         angle <- runif(1, pi/3, (2/3)*pi)
-  #       }else if(which.max(close_points) == 6){
-  #         angle <- runif(1, (2/3)*pi, pi)
-  #       }
-  #     } else{
-  #       angle <- runif(1, 0, 2*pi)
-  #     }
-  #     size_j <- size_list[[3]][lambda_list[[3]][j]]
-  #     growth_rate <- (1.25*size_j)/(600 + size_j)
-  #     X_grow <- s[lambda_list[[3]][j],] + matrix(c(growth_rate*cos(angle), growth_rate*sin(angle)), nrow = 1)
-  #     X_grow_trans <- (X_grow - mid)%*%t(R_list[[2]]) + t_list[[2]] + mid
-  #     X[j,] <- rmvnorm(1, c(X_grow_trans), diag(sigma2,2))
-  #   }else {
-  #     X_trans <- (s[lambda_list[[3]][j],] - mid)%*%t(R_list[[2]]) + t_list[[2]] + mid
-  #     X[j,] <- rmvnorm(1, c(X_trans), diag(sigma2,2))
-  #   }
-  # }
   for(j in 1:length(lambda_list[[3]])){
     X_trans <- (s[lambda_list[[3]][j],] - mid)%*%t(R_list[[2]]) + t_list[[2]] + mid
     X[j,] <- rmvnorm(1, c(X_trans), diag(sigma2,2))
@@ -375,10 +323,6 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
   
   
   ## Obtain the full simulated data and the observed data without latents
-  # sim_data <- as.data.frame(cbind(rbind(s_sizes, do.call(rbind, X_list)),
-  #                                 c(seq(1:(nrow(s))), c(lambda_list[[1]], lambda_list[[3]][which(X_2[,3] > size_threshold)])),
-  #                                 c(rep(1, nrow(s)), rep(c(2:3), c(nrow(X_list[[1]]), nrow(X_list[[2]])))),
-  #                                 c(rep(0, nrow(s)), rep(0, nrow(X_list[[1]])), one_cycle[[3]][which(X_2[,3] > size_threshold)])))
   sim_data <- as.data.frame(cbind(rbind(s_sizes, do.call(rbind, X_list)),
                                   c(seq(1:(nrow(s))), c(lambda_list[[1]], lambda_list[[3]][which(X_2[,3] > size_threshold)])),
                                   c(rep(0, nrow(s)), rep(c(1:2), c(nrow(X_list[[1]]), nrow(X_list[[2]])))),
@@ -394,8 +338,6 @@ sim_data <- function(sigma2_t, theta, density = c("low", "med", "high"), noise =
   
   X_obs <- X[which(a_x < X$x & X$x < b_x & a_y < X$y & X$y < b_y),]
   
-  # all_data <- rbind(sim_data[which(sim_data$id <= N_exp & sim_data$file == 0),],
-  #                   X_obs)
   all_data <- rbind(sim_data[which(sim_data$id %in% X_obs$id & sim_data$file == 0),],
                     X_obs)
   names(all_data) <- c("x", "y", "size", "id", "file", "mort")
