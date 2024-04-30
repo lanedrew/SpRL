@@ -48,9 +48,12 @@ scan_data <- read_csv(filename)
 scan_data <- scan_data %>% filter(!file == 0)
 
 ## Specify file paths for saving the results
-linkage_file <- paste0("./1_simulation_study/simulation_results/two_stage/linkage/", density, "_density_", noise, "_noise_", alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_linkage_results.csv")
-params_file <- paste0("./1_simulation_study/simulation_results/two_stage/linkage_params/", density, "_density_", noise, "_noise_", alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_parameter_results.csv")
-raw_data_file <- paste0("./1_simulation_study/simulation_results/two_stage/raw_data/", density, "_density_", noise, "_noise_", alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_raw_data.RDS")
+linkage_file <- paste0("./1_simulation_study/simulation_results/two_stage/linkage/", density, "_density_",
+                       noise, "_noise_", alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_linkage_results.csv")
+params_file <- paste0("./1_simulation_study/simulation_results/two_stage/linkage_params/", density, "_density_",
+                      noise, "_noise_", alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_parameter_results.csv")
+raw_data_file <- paste0("./1_simulation_study/simulation_results/two_stage/raw_data/", density, "_density_",
+                        noise, "_noise_", alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_raw_data.RDS")
 
 ## Obtain the file sizes and cumulative index m
 file_size <- scan_data %>% 

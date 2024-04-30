@@ -4,19 +4,7 @@
 // [[Rcpp::plugins(cpp11)]]
 using namespace Rcpp;
 
-// // [[Rcpp::export]]
-// arma::rowvec mat2vec_arma(const arma::mat& m, bool byrow=false) {
-//   NumericMatrix m_copy = clone(m);
-//   
-//   // stacks matrix columns on top of each other
-//   if(byrow){
-//     m_copy = transpose(m_copy);
-//   }
-//   NumericVector x(m_copy);
-//   x.attr("dim") = R_NilValue;
-//   return(x);
-// }
-// 
+
 // [[Rcpp::export]]
 NumericMatrix vector2matrix(NumericVector v, IntegerVector dim, bool byrow=false) {
   NumericVector v_copy = clone(v);
@@ -32,25 +20,6 @@ NumericMatrix vector2matrix(NumericVector v, IntegerVector dim, bool byrow=false
   }
   return(x);
 }
-
-
-
-// // [[Rcpp::export]]
-// arma::mat vector2matrix(const arma::rowvec& v, const arma::vec& dim, bool byrow=false) {
-// 
-//   // takes a vector and pulls out columns to a matrix
-//   arma::mat x(dim(0), dim(1));
-//   if(byrow){
-//     NumericMatrix x_t(dim(1), dim(0));
-//     std::copy(v_copy.begin(), v_copy.end(), x_t.begin());
-//     x = transpose(x_t);
-//   } else {
-//     std::copy(v_copy.begin(), v_copy.end(), x.begin());
-//   }
-//   return(x);
-// }
-
-
 
 
 // [[Rcpp::export]]
@@ -115,6 +84,7 @@ arma::rowvec Arma_colSums(const arma::mat& x) {
   return arma::sum(x, 0);
 }
 
+
 // [[Rcpp::export]]
 arma::rowvec sample_t_arma(const arma::uvec& lambda, const double& sigma2, const arma::mat& Y,
                            const arma::mat& s, const arma::mat& R_theta, const double& sigma2_t,
@@ -139,7 +109,6 @@ arma::rowvec sample_t_arma(const arma::uvec& lambda, const double& sigma2, const
 }
 
 
-
 // [[Rcpp::export]]
 double log_prob_arma(const double& theta, const double& theta_star, const arma::mat& S_mat, const double& kappa, const double& nu){
   
@@ -149,6 +118,7 @@ double log_prob_arma(const double& theta, const double& theta_star, const arma::
   return(log_r);
   
 }
+
 
 // [[Rcpp::export]]
 arma::mat sum_cube_slices(const arma::cube& x) {
@@ -163,7 +133,6 @@ arma::mat sum_cube_slices(const arma::cube& x) {
   
   return result;
 }
-
 
 
 // [[Rcpp::export]]
@@ -243,30 +212,6 @@ arma::vec rinvgammat_arma(const int& n, const arma::vec& range, const double& sh
 }
 
 
-
-// // [[Rcpp::export]]
-// double sample_sigma2_arma(const arma::mat& s, const arma::uvec& lambda, const double& c_sigma, const double& d_sigma,
-//                           const arma::mat& Y, const arma::mat& R_theta, const arma::rowvec& t, const arma::rowvec& mu_D,
-//                           const arma::vec& m, const arma::vec& range){
-//   
-//   // Rcout << "inside sample_sigma2 \n";
-//   double n = Y.n_rows;
-//   arma::mat s_lambda = s.rows(lambda);
-//   // Rcout << "inside sample_sigma2 after s_lambda \n";
-//   arma::mat s_lambda_m = s_lambda.rows(arma::span(m(0), sum(m) - 1));
-//   // Rcout << "inside sample_sigma2 after s_lambda_m \n";
-//   
-//   s_lambda_m = transform_s_arma(s_lambda_m, R_theta, t, mu_D);
-//   s_lambda = join_cols(s_lambda.rows(0, m(0) - 1), s_lambda_m);
-//   // Rcout << "inside sample_sigma2 after s_lambda \n";
-//   
-//   double sigma2 = rinvgammat_arma(1, range, n + c_sigma, .5*arma::accu(pow(Y - s_lambda, 2)) + d_sigma)(0);
-//   // double sigma2 = 1.0/R::rgamma(n + c_sigma, 1.0/(.5*arma::accu(pow(Y - s_lambda, 2)) + d_sigma));
-//   
-//   return(sigma2);
-//   
-// }
-
 // [[Rcpp::export]]
 double sample_sigma2_arma(const arma::mat& s, const arma::uvec& lambda, const double& c_sigma, const double& d_sigma,
                           const arma::mat& Y, const arma::mat& R_theta, const arma::rowvec& t, const arma::rowvec& mu_D,
@@ -279,8 +224,6 @@ double sample_sigma2_arma(const arma::mat& s, const arma::uvec& lambda, const do
   s_lambda_m = transform_s_arma(s_lambda_m, R_theta, t, mu_D);
   s_lambda = join_cols(s_lambda.rows(0, m(0) - 1), s_lambda_m);
   
-  // double sigma2 = rinvgammat_arma(1, range, n + c_sigma, .5*arma::accu(pow(Y - s_lambda, 2)) + d_sigma)(0);
-  // double sigma2 = rinvgammat_arma2(range, n + c_sigma, .5*arma::accu(pow(Y - s_lambda, 2)) + d_sigma);
   double sigma2 = 1.0 / R::rgamma(n + c_sigma, 1.0 / (.5 * arma::accu(pow(Y - s_lambda, 2)) + d_sigma));
   if(sigma2 > range(1)){
     sigma2 = sigma2_prev;
@@ -310,6 +253,7 @@ Rcpp::List create_clusters(const arma::uvec& lambda){
   return (clusters);
 }
 
+
 // [[Rcpp::export]]
 Rcpp::List create_clusters2(const arma::uvec& lambda, const int& N) {
   
@@ -335,7 +279,6 @@ Rcpp::List create_clusters2(const arma::uvec& lambda, const int& N) {
 }
 
 
-
 // [[Rcpp::export]]
 arma::uvec near_latents_arma(const arma::mat& s, const arma::rowvec& Y_k, const double& dist) {
   
@@ -351,41 +294,6 @@ arma::uvec near_latents_arma(const arma::mat& s, const arma::rowvec& Y_k, const 
 }
 
 
-// // [[Rcpp::export]]
-// Rcpp::List update_clusters_arma(const Rcpp::List& C_lambda, const arma::uword& lambda_k, const arma::uword& lambda_l, const arma::uword& k) {
-//   
-//   if(lambda_k == lambda_l){
-//     return C_lambda;
-//   } else{
-//     Rcpp::List new_C_lambda = clone(C_lambda);
-//     
-//     // Remove record k from its current cluster
-//     arma::uvec indices_k = Rcpp::as<arma::uvec>(new_C_lambda[lambda_k]);
-//     indices_k = indices_k.elem(find(indices_k != k));
-//     
-//     // Check if cluster is empty and set to R_NilValue if it is
-//     if(indices_k.is_empty()){
-//       new_C_lambda[lambda_k] = R_NilValue;
-//     } else {
-//       new_C_lambda[lambda_k] = indices_k;
-//     }
-//     
-//     // Add record k to the new cluster
-//     if(new_C_lambda[lambda_l] == R_NilValue){
-//       arma::uvec indices_l = {lambda_l};
-//       new_C_lambda[lambda_l] = indices_l;
-//     }else{
-//       arma::uvec indices_l = Rcpp::as<arma::uvec>(new_C_lambda[lambda_l]);
-//       indices_l = arma::join_cols(indices_l, arma::uvec({k}));
-//       new_C_lambda[lambda_l] = indices_l;
-//     }
-//     
-//     return new_C_lambda;
-//   }
-//   
-// }
-
-
 //[[Rcpp::export]]
 arma::uvec sample_lambda_arma(const arma::uvec& lambda, const arma::mat& s, const double& sigma2, const arma::mat& R_theta,
                               const arma::rowvec& t, const arma::rowvec& mu_D, arma::mat Y, const arma::vec& file_id, const int& N,
@@ -396,15 +304,12 @@ arma::uvec sample_lambda_arma(const arma::uvec& lambda, const arma::mat& s, cons
   arma::uvec lambda_k = lambda;
   Rcpp::List new_C_lambda = Rcpp::clone(C_lambda);
   
-  // Rcout << "inside sample_lambda after inits \n";
-  
   // arma::wall_clock timer;
   // timer.tic();
   for(int k = 0; k < n; ++k){
     
     if(file_id(k) == 1){
       arma::uvec latent_candidates = near_latents_arma(s, Y.row(k), dist);
-      // Rcout << "inside sample_lambda after latent_cands \n";
       if(latent_candidates.n_elem < 2){
         double updated_dist = dist;
         while(latent_candidates.n_elem < 2){
@@ -417,7 +322,6 @@ arma::uvec sample_lambda_arma(const arma::uvec& lambda, const arma::mat& s, cons
       sum_sq_vec = -0.5/sigma2 * sum_sq_vec;
       arma::vec gumbel = -log(-log(Rcpp::runif(latent_candidates.n_elem, 0, 1)));
       lambda_k(k) = latent_candidates(arma::index_max(sum_sq_vec + gumbel));
-      // Rcout << "inside sample_lambda after lambda_k(k) \n";
       
     }else if(file_id(k) == 2){
       arma::uvec latent_candidates = near_latents_arma(s_trans, Y.row(k), dist);
@@ -441,7 +345,6 @@ arma::uvec sample_lambda_arma(const arma::uvec& lambda, const arma::mat& s, cons
   // double n_secs = timer.toc();
   // Rcout << "number of seconds: " << n_secs << " for full run lambda sampler \n";
   
-  // Rcout << "inside sample_lambda before return(lambda_k) \n";
   return(lambda_k);
 }
 
@@ -456,13 +359,9 @@ List s_means_arma(const arma::uvec& lambda, const arma::mat new_Y, const int& N)
     arma::uvec file_indices = find(lambda == i);
     if(file_indices.n_elem > 0){
       s_sizes(i) = as<double>(wrap(file_indices.n_elem));
-      // Rcout << "double = " << as<double>(wrap(file_indices.n_elem)) << ", or = " << file_indices.n_elem << "\n";
       s_means.row(i) = Arma_colSums(new_Y.rows(file_indices)) / s_sizes(i);
     }
   }
-  
-  // Rcout << "s_sizes = " << s_sizes << "\n";
-  // Rcout << "s_means = " << s_means << "\n";
   
   return Rcpp::List::create(Named("s_means") = s_means,
                             Named("s_sizes") = s_sizes);
@@ -494,9 +393,7 @@ arma::mat sample_s_arma(const arma::uvec& lambda, const double& sigma2, const ar
   // arma::wall_clock timer;
   // timer.tic();
   arma::mat Y_file1 = Y.rows(find(file_id == 1));
-  // arma::mat Y_file2 = transform_Y_arma(Y.rows(find(file_id == 2)), R_theta, t, mu_D);
   arma::mat new_Y = arma::join_cols(Y_file1, Y_trans);
-  // arma::mat new_Y = arma::join_cols(Y_file1, Y_file2);
   
   List s_ms = s_means_arma(lambda, new_Y, N);
   
@@ -566,6 +463,7 @@ Rcpp::DataFrame mat2df_arma(const arma::mat& X) {
   
 } 
 
+
 // [[Rcpp::export]]
 arma::mat cube2mat_arma(const arma::cube& X_cube){
   
@@ -574,11 +472,11 @@ arma::mat cube2mat_arma(const arma::cube& X_cube){
   
   for(arma::uword i = 0; i < num_rows; i++){
     X_mat.row(i) = arma::conv_to<arma::rowvec>::from(arma::vectorise(X_cube.slice(i)));
-    // X_mat.row(i) = arma::vectorise(X_cube.slice(i), 1);
   }
   
   return(X_mat);
 }
+
 
 // [[Rcpp::export]]
 void write_csv_arma_df(const arma::mat& X, const std::string& filePath) {
@@ -591,6 +489,7 @@ void write_csv_arma_df(const arma::mat& X, const std::string& filePath) {
   writeCsv(_["x"] = X_df, _["file"] = filePath, _["append"] = true);
   
 }
+
 
 // [[Rcpp::export]]
 void write_csv_arma_vec(const arma::vec& X, const std::string& filePath) {
@@ -1051,155 +950,12 @@ Rcpp::List run_mcmc_SpRL_linkage_arma_ft_timing(const int& n_iter, const arma::m
 }
 
 
-
-//[[Rcpp::export]]
-Rcpp::List run_mcmc_SpRL_linkage_arma_ft_ns(const int& n_iter, const arma::mat& Y_mat, const int& N, const arma::vec& m,
-                                            const arma::vec& D_bounds, const double& dist, const Rcpp::List& init_vals,
-                                            const Rcpp::List& hyperparameters, const arma::vec& sigma2_range,
-                                            const std::string& file_name_lambda, const std::string& file_name_s,
-                                            const std::string& file_name_theta, const std::string& file_name_t,
-                                            const std::string& file_name_sigma2, bool verbose = true){
-  
-  // Calculate necessary quantities
-  int n = Y_mat.n_rows; // Total number of records
-  arma::rowvec mu_D = { (D_bounds(0) + D_bounds(1))/2.0, (D_bounds(2) + D_bounds(3))/2.0 }; // Midpoint of the spatial domain
-  arma::mat Y = Y_mat.cols(0,1); // Observed spatial locations
-  arma::vec file_id = Y_mat.col(3); // File IDs for each record
-  
-  
-  // Create storage objects for the parameters
-  arma::umat lambda_out(n_iter + 1, n); // Linkage structure
-  arma::cube s_out(N, 2, n_iter + 1); // Latent locations
-  arma::vec sigma2_out(n_iter + 1); // Location measurement error
-  arma::vec theta_out(n_iter + 1); // Rotation for File 2
-  arma::mat t_out(n_iter + 1, 2); // Translation for File 2
-  
-  
-  // Hyperparameter values
-  double c_sigma = hyperparameters["c_sigma"]; // sigma2
-  double d_sigma = hyperparameters["d_sigma"]; 
-  double sigma2_t = hyperparameters["sigma2_t"]; // t
-  
-  
-  // Initialize the parameter values for the sampler
-  arma::urowvec lambda_init = init_vals["lambda"];
-  lambda_out.row(0) = lambda_init;
-  arma::mat s_init = init_vals["s"];
-  s_out.slice(0) = s_init;
-  sigma2_out(0) = init_vals["sigma2"];
-  theta_out(0) = init_vals["theta"];
-  double sigma2_theta = as<double>(wrap(init_vals["sigma2_theta"]));
-  arma::rowvec t_init = init_vals["t"];
-  t_out.row(0) = t_init;
-  
-  
-  // Create the linkage set C and the growth cluster index and initialize relevant storage
-  Rcpp::List C_lambda = create_clusters(as<arma::uvec>(wrap(lambda_out.row(0))));
-  arma::mat R_theta = calc_R_theta_arma(theta_out(0));
-  
-  
-  if(verbose){
-    Rcout << "Sampler Initialized. \n";
-  }
-  
-  arma::vec iteration_timer(n_iter);
-  arma::wall_clock timer;
-  arma::wall_clock timer_full;
-  timer_full.tic();
-  
-  for(arma::uword i = 0; i < n_iter; i++){
-    
-    timer.tic();
-    // Calculate transformed Y for file 2
-    arma::mat Y_trans = transform_Y_arma(Y.rows(arma::span(m(0), sum(m) - 1)), R_theta, t_out.row(i), mu_D);
-    
-    
-    // Sample Lambda
-    lambda_out.row(i+1) = as<arma::urowvec>(wrap(sample_lambda_arma(as<arma::uvec>(wrap(lambda_out.row(i))), s_out.slice(i), sigma2_out(i),
-                                                 R_theta, t_out.row(i), mu_D, Y, file_id, N, n, m, dist, C_lambda)));
-    C_lambda = create_clusters(as<arma::uvec>(wrap(lambda_out.row(i+1))));
-    
-    
-    // Sample s
-    s_out.slice(i+1) = sample_s_arma(as<arma::uvec>(wrap(lambda_out.row(i+1))), sigma2_out(i), Y, Y_trans, N, R_theta,
-                t_out.row(i), mu_D, m, n, C_lambda, file_id, D_bounds);
-    
-    
-    // Sample sigma2
-    sigma2_out(i+1) = sample_sigma2_arma(s_out.slice(i+1), as<arma::uvec>(wrap(lambda_out.row(i+1))), c_sigma, d_sigma,
-               Y, R_theta, t_out.row(i), mu_D, m, sigma2_range, sigma2_out(i));
-    
-    
-    // Sample t
-    t_out.row(i+1) = sample_t_arma(as<arma::uvec>(wrap(lambda_out.row(i+1))), sigma2_out(i+1), Y,
-              s_out.slice(i+1), R_theta, sigma2_t, mu_D, m);
-    
-    
-    if(i == 0){
-      Rcout << i+1 << " / " << n_iter << " iterations complete. \n";
-      // write_csv_arma(as<arma::rowvec>(wrap(lambda_out.row(i))), file_name_lambda);
-      // write_csv_arma(arma::conv_to<arma::rowvec>::from(arma::vectorise(s_out.slice(i))), file_name_s);
-      // write_csv_arma(t_out.row(i), file_name_t);
-      // save_rds(Rcpp::List::create(Named("lambda") = lambda_out,
-      //                             Named("s") = s_out,
-      //                             Named("t") = t_out,
-      //                             Named("sigma2") = sigma2_out),
-      //                             file_name);
-      
-    }
-    
-    if(verbose & ((i + 1) % 100 == 0)){
-      Rcout << i+1 << " / " << n_iter << " iterations complete. \n";
-      // write_csv_arma_df(as<arma::mat>(wrap(lambda_out.tail_rows(100))), file_name_lambda);
-      // write_csv_arma_df(cube2mat_arma(s_out.tail_slices(100)), file_name_s);
-      // write_csv_arma_df(t_out.tail_rows(100), file_name_t);
-      if(i > 0){
-        // write_csv_arma_df(as<arma::mat>(wrap(lambda_out.rows(i - 99, i))), file_name_lambda);
-        // write_csv_arma_df(cube2mat_arma(s_out.slices(i - 99, i)), file_name_s);
-        // write_csv_arma_df(t_out.rows(i - 99, i), file_name_t);
-        // write_csv_arma_vec(sigma2_out.rows(i - 99, i), file_name_sigma2);
-        // save_rds(Rcpp::List::create(Named("lambda") = lambda_out,
-        //                             Named("s") = s_out,
-        //                             Named("t") = t_out,
-        //                             Named("sigma2") = sigma2_out),
-        //                             file_name);
-      }
-    }
-    
-    
-    iteration_timer(i) = timer.toc();
-    if(sum(iteration_timer)/3600 > 167.5){
-      
-      Rcout << i+1 << " / " << n_iter << " iterations completed within time limit. \n";
-      return(Rcpp::List::create(Named("lambda") = lambda_out,
-                                Named("s") = s_out,
-                                Named("t") = t_out,
-                                Named("sigma2") = sigma2_out));
-      // save_rds(Rcpp::List::create(Named("lambda") = lambda_out,
-      //                             Named("s") = s_out,
-      //                             Named("t") = t_out,
-      //                             Named("sigma2") = sigma2_out),
-      //                             file_name);
-    }
-    // Rcout << "Number of seconds: " << n_secs << " for full sampler iteration \n";
-    
-  }
-  
-  double n_secs_full = timer_full.toc();
-  Rcout << "Number of minutes: " << n_secs_full / 60.0 << " to complete full sampler \n";
-  
-  return(Rcpp::List::create(Named("lambda") = lambda_out,
-                            Named("s") = s_out,
-                            Named("t") = t_out,
-                            Named("sigma2") = sigma2_out));
-  
-}
-
 // Function to calculate Euclidean distance between two points
 // [[Rcpp::export]]
 double euclidean_dist_arma(double x1, double y1, double x2, double y2) {
   return sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
 }
+
 
 // [[Rcpp::export]]
 arma::uword closest_point_arma(const arma::mat& file_1, const arma::rowvec& file_2_k, const double& dist) {
@@ -1256,207 +1012,7 @@ arma::uvec nearest_distance_matching(const arma::mat& file_1, const arma::mat& f
   
 }  
 
-// // [[Rcpp::export]]
-// arma::uvec growth_cluster_check(const Rcpp::List& clusters, const arma::mat& V, double q) {
-//   
-//   arma::uword n_clusters = clusters.size();
-//   arma::uvec growth_clusters(n_clusters);
-//   arma::vec ids = V.col(1);
-//   arma::vec vols = V.col(0);
-//   
-//   for (arma::uword i = 0; i < n_clusters; ++i) {
-//     
-//     // Check if cluster is empty
-//     if (clusters[i] == R_NilValue) {
-//       growth_clusters(i) = 0;
-//     } else {
-//       arma::uvec indices = clusters[i];
-//       arma::vec file_ids = ids(indices);
-//       
-//       arma::vec unique_files = arma::unique(file_ids);
-//       if (unique_files.n_elem > 1) {
-//         
-//         arma::vec cluster_volumes = vols(indices);
-//         arma::vec file_volumes(unique_files.n_elem, arma::fill::zeros);
-//         
-//         for (arma::uword j = 0; j < unique_files.n_elem; ++j) {
-//           arma::uvec file_indices = find(file_ids == unique_files(j));
-//           file_volumes(j) = arma::sum(cluster_volumes(file_indices));
-//         }
-//         
-//         arma::uword min_file_index = arma::index_min(unique_files);
-//         arma::uword max_file_index = arma::index_max(unique_files);
-//         
-//         double min_file_volume = file_volumes(min_file_index);
-//         double max_file_volume = file_volumes(max_file_index);
-//         
-//         if (max_file_volume >= q * min_file_volume) {
-//           growth_clusters(i) = 1;
-//         } else {
-//           growth_clusters(i) = 0;
-//         }
-//         
-//       } else {
-//         growth_clusters(i) = 0;
-//       }
-//     }
-//   }
-//   
-//   return growth_clusters;
-// }
-// 
-// 
-// // Define the Q(phi) function
-// // [[Rcpp::export]]
-// double Q_func(const double& d, const double& phi) {
-//   if (d <= phi) {
-//     return 1.0 - (1.5) * (d / phi) + (.5) * pow((d / phi), 3.0);
-//   } else {
-//     return 0.0;
-//   }
-// }
-// 
-// 
-// // Compute spatial covariance matrix for growth clusters
-// // [[Rcpp::export]]
-// arma::mat spatial_covariance(const arma::mat& s, const arma::uvec& gc_tracker, const double& phi) {
-//   
-//   // Get number of growth clusters
-//   arma::uword n_gc = arma::sum(gc_tracker);
-//   
-//   // Initialize spatial covariance matrix
-//   arma::mat Q(n_gc, n_gc, arma::fill::zeros);
-//   
-//   // Loop over all pairs of growth clusters
-//   arma::uword i = 0;
-//   arma::uword j = 0;
-//   for (arma::uword c = 0; c < gc_tracker.n_elem; ++c) {
-//     if (gc_tracker(c) == 1) {
-//       j = 0;
-//       for (arma::uword d = 0; d < gc_tracker.n_elem; ++d) {
-//         if (gc_tracker(d) == 1) {
-//           double distance = arma::norm(s.row(c) - s.row(d), 2);
-//           Q(i, j) = Q_func(distance, phi);
-//           ++j;
-//         } 
-//       }
-//       ++i;
-//     }  
-//   }
-//   
-//   return (Q);
-// } 
-// 
-// 
-// // [[Rcpp::export]]
-// arma::mat calculate_A(const Rcpp::List& C_lambda, const arma::mat& V, const arma::uvec& gc_tracker, const double& b) {
-//   
-//   arma::uword n_gc = arma::sum(gc_tracker);
-//   arma::mat A(n_gc, n_gc, arma::fill::zeros);
-//   arma::vec vols = V.col(0);
-//   arma::vec ids = V.col(1);
-//   
-//   arma::uword c_index = 0;
-//   
-//   for (arma::uword c1 = 0; c1 < C_lambda.size(); ++c1) {
-//     
-//     if (gc_tracker(c1) == 1) {
-//       
-//       arma::uvec indices1 = C_lambda[c1];
-//       arma::vec file_ids1 = ids(indices1);
-//       arma::vec vols_ids1 = vols(indices1);
-//       arma::vec unique_files1 = arma::unique(file_ids1);
-//       
-//       arma::uword min_file_index1 = arma::index_min(unique_files1);
-//       double v_min1 = arma::sum(vols_ids1(find(file_ids1 == unique_files1(min_file_index1))));
-//       
-//       double a_c1 = v_min1 / (b + v_min1);
-//       
-//       A(c_index, c_index) = a_c1;
-//       
-//       c_index++;
-//     }
-//   }
-//   
-//   return (A);
-// } 
-// 
-// 
-// // [[Rcpp::export]]
-// arma::mat calculate_W(const Rcpp::List& C_lambda, const arma::mat& V, const arma::uvec& gc_tracker, const double& v_max) {
-//   
-//   arma::uword n_gc = arma::sum(gc_tracker);
-//   arma::mat W(n_gc, n_gc, arma::fill::zeros);
-//   arma::vec vols = V.col(0);
-//   arma::vec ids = V.col(1);
-//   
-//   arma::uword c_index = 0;
-//   
-//   for (arma::uword c1 = 0; c1 < C_lambda.size(); ++c1) {
-//     
-//     if (gc_tracker(c1) == 1) {
-//       
-//       arma::uvec indices1 = C_lambda[c1];
-//       arma::vec file_ids1 = ids(indices1);
-//       arma::vec vols_ids1 = vols(indices1);
-//       arma::vec unique_files1 = arma::unique(file_ids1);
-//       
-//       arma::uword min_file_index1 = arma::index_min(unique_files1);
-//       double v_min1 = arma::sum(vols_ids1(find(file_ids1 == unique_files1(min_file_index1))));
-//       
-//       // double w_c1 = v_min1 / v_max;
-//       double w_c1 = v_min1;
-//       
-//       // W(c_index, c_index) = w_c1;
-//       W(c_index, c_index) = 1.0;
-//       
-//       c_index++;
-//     }
-//   }
-//   
-//   return (W);
-// } 
-// 
-// 
-// 
-// // [[Rcpp::export]]
-// arma::vec calculate_growth(const Rcpp::List& C_lambda, const arma::uvec& gc_tracker, const arma::mat& V, const double& int_length) {
-//   
-//   arma::uword n_clusters = C_lambda.size();
-//   arma::vec growth(n_clusters, arma::fill::zeros);
-//   arma::vec ids = V.col(1);
-//   arma::vec vols = V.col(0);
-//   
-//   for (arma::uword i = 0; i < n_clusters; ++i) {
-//     
-//     if (gc_tracker(i) == 1) {
-//       arma::uvec indices = C_lambda[i];
-//       arma::vec file_ids = ids(indices);
-//       
-//       arma::vec unique_files = arma::unique(file_ids);
-//       arma::vec cluster_volumes = vols(indices);
-//       arma::vec file_volumes(unique_files.n_elem, arma::fill::zeros);
-//       
-//       for (arma::uword j = 0; j < unique_files.n_elem; ++j) {
-//         arma::uvec file_indices = find(file_ids == unique_files(j));
-//         file_volumes(j) = arma::sum(cluster_volumes(file_indices));
-//       }
-//       
-//       arma::uword min_file_index = arma::index_min(unique_files);
-//       arma::uword max_file_index = arma::index_max(unique_files);
-//       
-//       double min_file_volume = file_volumes(min_file_index);
-//       double max_file_volume = file_volumes(max_file_index);
-//       
-//       growth(i) = (max_file_volume - min_file_volume) / (int_length * (max_file_index - min_file_index));
-//       
-//     }
-//   } 
-//   
-//   return (growth(find(gc_tracker == 1)));
-// }
-// 
-// 
+
 //[[Rcpp::export]]
 arma::mat update_covars_arma(const arma::mat& s, const Rcpp::List& rasters){
 
@@ -1557,532 +1113,64 @@ Rcpp::List calculate_crps(const arma::mat& y_rep, const arma::mat& y_rep_star, c
 } 
 
 
-
-
-
-
-
-// 
-// 
-// //[[Rcpp::export]]
-// arma::rowvec sample_beta_arma(const arma::mat& X_s, const arma::mat& A, const arma::mat& W, 
-//                               const arma::mat Q_phi, const arma::colvec& G, const arma::mat& Sigma_beta_inv, const double& gamma2,
-//                               const double& tau2){
-//   
-//   arma::vec mu = inv_sympd(X_s.t()*A*inv_sympd(gamma2*Q_phi + tau2*W)*A*X_s + Sigma_beta_inv)*X_s.t()*A*inv_sympd(gamma2*Q_phi + tau2*W)*G;
-//   arma::mat cov = inv_sympd(X_s.t()*A*inv_sympd(gamma2*Q_phi + tau2*W)*A*X_s + Sigma_beta_inv);
-//   
-//   arma::vec beta = arma::mvnrnd(mu, cov);
-//   
-//   return(as<arma::rowvec>(wrap(beta)));
-// }
-// 
-// 
-// //[[Rcpp::export]]
-// Rcpp::List sample_b_arma(const Rcpp::List& C_lambda, const arma::mat& V, const arma::uvec& gc_tracker,
-//                          const arma::mat& X_s, const arma::mat& A, const arma::mat& Q_phi, const arma::mat& W,
-//                          const arma::colvec& G, const arma::vec& beta, const double& gamma2, const double& tau2,
-//                          const double& u, const double& w, const double& b, const double& sigma2_b){
-//   
-//   double b_star = R::rnorm(b, sqrt(sigma2_b));
-//   double accept_reject = 0.0;
-//   if(b_star < 0){
-//     return(Rcpp::List::create(Named("b") = b,
-//                               Named("accept_reject") = accept_reject));
-//   }else {
-//     arma::mat new_A = calculate_A(C_lambda, V, gc_tracker, b_star); 
-//     double log_r = (u - 1)*(log(b_star) - log(b)) - w*(b_star - b) -
-//       0.5*as_scalar(trans(G - new_A*X_s*beta)*inv_sympd(gamma2*Q_phi + tau2*W)*(G - new_A*X_s*beta) - 
-//       trans(G - A*X_s*beta)*inv_sympd(gamma2*Q_phi + tau2*W)*(G - A*X_s*beta));
-//     if(log(R::runif(0,1)) < log_r){
-//       accept_reject = 1.0;
-//     }else {
-//       b_star = b;
-//     }
-//     
-//   }
-//   
-//   return(Rcpp::List::create(Named("b") = b_star,
-//                             Named("accept_reject") = accept_reject));
-// } 
-// 
-// 
-// //[[Rcpp::export]]
-// Rcpp::List sample_phi_arma(const Rcpp::List& C_lambda, const arma::mat& V, const arma::uvec& gc_tracker,
-//                            const arma::mat& X_s, const arma::mat& A, const arma::mat& Q_phi, const arma::mat& W,
-//                            const arma::colvec& G, const arma::vec& beta, const double& gamma2, const double& tau2,
-//                            const arma::mat& s, const double& r, const double& phi, const double& sigma2_phi){
-//   
-//   double phi_star = R::rnorm(phi, sqrt(sigma2_phi));
-//   double accept_reject = 0.0;
-//   if(phi_star < 0 || phi_star > r){
-//     return(Rcpp::List::create(Named("phi") = phi,
-//                               Named("accept_reject") = accept_reject));
-//   }else {
-//     arma::mat new_Q_phi = spatial_covariance(s, gc_tracker, phi_star); 
-//     double log_r = -0.5 * as_scalar(trans(G - A*X_s*beta)*inv_sympd(gamma2*new_Q_phi + tau2*W)*(G - A*X_s*beta) - 
-//                                     trans(G - A*X_s*beta)*inv_sympd(gamma2*Q_phi + tau2*W)*(G - A*X_s*beta)) -
-//                     0.5 * (log(det(gamma2 * new_Q_phi + tau2 * W)) - log(det(gamma2 * Q_phi + tau2 * W)));
-//     // Rcout << "log_r val = " << log_r << "\n";
-//     if(log(R::runif(0,1)) < log_r){
-//       accept_reject = 1.0;
-//     }else {
-//       phi_star = phi;
-//     }
-//     
-//   }
-//   
-//   return(Rcpp::List::create(Named("phi") = phi_star,
-//                             Named("accept_reject") = accept_reject));
-// }
-// 
-// 
-// //[[Rcpp::export]]
-// Rcpp::List sample_tau2_arma(const arma::uvec& gc_tracker, const arma::mat& X_s, const arma::mat& A,
-//                             const arma::mat& Q_phi, const arma::mat& W, const arma::colvec& G, const arma::vec& beta,
-//                             const double& gamma2, const double& tau2, const double& c_tau, const double& d_tau,
-//                             const double& sigma2_tau, const double& max_tau2){
-//   
-//   double tau2_star = R::rnorm(tau2, sqrt(sigma2_tau));
-//   double accept_reject = 0.0;
-//   if(tau2_star < 0 || tau2_star > max_tau2){
-//     return(Rcpp::List::create(Named("tau2") = tau2,
-//                               Named("accept_reject") = accept_reject));
-//   }else {
-//     double log_r = (-c_tau - 1)*(log(tau2_star) - log(tau2)) - d_tau*(1.0/tau2_star - 1.0/tau2) - 
-//       0.5 * as_scalar(trans(G - A*X_s*beta)*inv_sympd(gamma2*Q_phi + tau2_star*W)*(G - A*X_s*beta) - 
-//       trans(G - A*X_s*beta)*inv_sympd(gamma2*Q_phi + tau2*W)*(G - A*X_s*beta)) -
-//       0.5 * (log(det(gamma2 * Q_phi + tau2_star * W)) - log(det(gamma2 * Q_phi + tau2 * W)));
-//     // Rcout << "log_r val = " << log_r << "\n";
-//     if(log(R::runif(0,1)) < log_r){
-//       accept_reject = 1.0;
-//     }else {
-//       tau2_star = tau2;
-//     }
-//     
-//   }
-//   
-//   return(Rcpp::List::create(Named("tau2") = tau2_star,
-//                             Named("accept_reject") = accept_reject));
-// }
-// 
-// 
-// //[[Rcpp::export]]
-// Rcpp::List sample_gamma2_arma(const arma::uvec& gc_tracker, const arma::mat& X_s, const arma::mat& A,
-//                               const arma::mat& Q_phi, const arma::mat& W, const arma::colvec& G, const arma::vec& beta,
-//                               const double& gamma2, const double& tau2, const double& c_gamma, const double& d_gamma,
-//                               const double& sigma2_gamma, const double& max_gamma2){
-//   
-//   double gamma2_star = R::rnorm(gamma2, sqrt(sigma2_gamma));
-//   double accept_reject = 0.0;
-//   if(gamma2_star < 0 || gamma2_star > max_gamma2){
-//     return(Rcpp::List::create(Named("gamma2") = gamma2,
-//                               Named("accept_reject") = accept_reject));
-//   }else {
-//     double log_r = (-c_gamma - 1)*(log(gamma2_star) - log(gamma2)) - d_gamma*(1.0/gamma2_star - 1.0/gamma2) - 
-//       0.5 * as_scalar(trans(G - A*X_s*beta)*inv_sympd(gamma2_star*Q_phi + tau2*W)*(G - A*X_s*beta) - 
-//       trans(G - A*X_s*beta)*inv_sympd(gamma2*Q_phi + tau2*W)*(G - A*X_s*beta)) - 
-//       0.5 * (log(det(gamma2_star * Q_phi + tau2 * W)) - log(det(gamma2 * Q_phi + tau2 * W)));
-//     // Rcout << "log_r val = " << log_r << "\n";
-//     if(log(R::runif(0,1)) < log_r){
-//       accept_reject = 1.0;
-//     }else {
-//       gamma2_star = gamma2;
-//     }
-//     
-//   }
-//   
-//   return(Rcpp::List::create(Named("gamma2") = gamma2_star,
-//                             Named("accept_reject") = accept_reject));
-// }
-// 
-// 
-// 
-// 
-// 
-// 
-// //[[Rcpp::export]]
-// Rcpp::List run_mcmc_SpRL_growth_arma(const int& n_iter, const arma::mat& Y_mat, const int& N, const double& q,
-//                                      const arma::vec& m, const arma::vec& D_bounds, const double& dist, const Rcpp::List& init_vals,
-//                                      const Rcpp::List& hyperparameters, const Rcpp::List& rasters, const double& int_length, 
-//                                      const std::string& file_name, bool verbose = true){
-// 
-//   // Calculate necessary quantities
-//   int n = Y_mat.n_rows; // Total number of records
-//   arma::rowvec mu_D = { (D_bounds(0) + D_bounds(1))/2.0, (D_bounds(2) + D_bounds(3))/2.0 }; // Midpoint of the spatial domain
-//   arma::mat Y = Y_mat.cols(0,1); // Observed spatial locations
-//   arma::mat V = Y_mat.cols(2,3); // Observed canopy volumes with file designation
-//   double v_max = max(V.col(0));
-//   arma::vec file_id = Y_mat.col(3); // File IDs for each record
-// 
-// 
-//   // Create storage objects for the parameters
-//   arma::vec b_out(n_iter + 1); // Controls how quickly growth mean approaches asymptote
-//   arma::vec ar_b(n_iter);
-//   arma::mat beta_out(n_iter + 1, rasters.size() + 1); // Linear coefficients for covariates w/ intercept
-//   arma::vec phi_out(n_iter + 1); // Interaction distance for spatial covariance of growths
-//   arma::vec ar_phi(n_iter);
-//   arma::vec gamma2_out(n_iter + 1); // Spatial variance for growths
-//   arma::vec ar_gamma2(n_iter);
-//   arma::vec tau2_out(n_iter + 1); // Measurement error variance for growths
-//   arma::vec ar_tau2(n_iter);
-// 
-// 
-//   // Hyperparameter values
-//   double u = hyperparameters["u"]; // b
-//   double w = hyperparameters["w"];
-//   double sigma2_b_min = as<double>(wrap(hyperparameters["sigma2_b_min"]));
-//   double sigma2_b_rate = as<double>(wrap(hyperparameters["sigma2_b_rate"]));
-//   arma::mat Sigma_beta_inv = arma::inv_sympd(as<arma::mat>(wrap(hyperparameters["Sigma_beta"]))); // Beta
-//   double r = hyperparameters["r"]; // phi
-//   double sigma2_phi_min = as<double>(wrap(hyperparameters["sigma2_phi_min"]));
-//   double sigma2_phi_rate = as<double>(wrap(hyperparameters["sigma2_phi_rate"]));
-//   double c_gamma = hyperparameters["c_gamma"]; // gamma2
-//   double d_gamma = hyperparameters["d_gamma"];
-//   double max_gamma2 = hyperparameters["max_gamma2"];
-//   double sigma2_gamma_min = as<double>(wrap(hyperparameters["sigma2_gamma_min"]));
-//   double sigma2_gamma_rate = as<double>(wrap(hyperparameters["sigma2_gamma_rate"]));
-//   double c_tau = hyperparameters["c_tau"]; // tau2
-//   double d_tau = hyperparameters["d_tau"];
-//   double sigma2_tau_min = as<double>(wrap(hyperparameters["sigma2_tau_min"]));
-//   double sigma2_tau_rate = as<double>(wrap(hyperparameters["sigma2_tau_rate"]));
-//   double max_tau2 = hyperparameters["max_tau2"];
-// 
-// 
-//   // Initialize the parameter values for the sampler
-//   arma::uvec lambda = init_vals["lambda"];
-//   arma::mat s = init_vals["s"];
-//   b_out(0) = init_vals["b"];
-//   double sigma2_b = as<double>(wrap(init_vals["sigma2_b"]));
-//   arma::rowvec beta_init = init_vals["beta"];
-//   beta_out.row(0) = beta_init;
-//   phi_out(0) = init_vals["phi"];
-//   double sigma2_phi = init_vals["sigma2_phi"];
-//   gamma2_out(0) = init_vals["gamma2"];
-//   double sigma2_gamma = as<double>(wrap(init_vals["sigma2_gamma"]));
-//   tau2_out(0) = init_vals["tau2"];
-//   double sigma2_tau = as<double>(wrap(init_vals["sigma2_tau"]));
-// 
-// 
-//   // Create the linkage set C and the growth cluster index and initialize relevant storage
-//   List C_lambda = create_clusters(lambda);
-//   arma::uvec gc_tracker = growth_cluster_check(C_lambda, V, q);
-//   Rcpp::List update_b(2);
-//   Rcpp::List update_phi(2);
-//   Rcpp::List update_tau2(2);
-//   Rcpp::List update_gamma2(2);
-//   arma::mat X_s = update_covars_arma(s, rasters);
-//   X_s = X_s.rows(find(gc_tracker == 1));
-//   arma::colvec G = calculate_growth(C_lambda, gc_tracker, V, int_length);
-//   arma::mat W = calculate_W(C_lambda, V, gc_tracker, v_max);
-// 
-// 
-//   if(verbose){
-//     Rcout << "Sampler initialized. \n";
-//   }
-// 
-//   // arma::wall_clock timer;
-//   arma::wall_clock timer_full;
-//   timer_full.tic();
-// 
-//   for(arma::uword i = 0; i < n_iter; i++){
-// 
-//     // timer.tic();
-//     arma::mat A = calculate_A(C_lambda, V, gc_tracker, b_out(i));
-//     arma::mat Q_phi = spatial_covariance(s, gc_tracker, phi_out(i));
-// 
-// 
-//     // Sample Beta
-//     beta_out.row(i+1) = sample_beta_arma(X_s, A, W, Q_phi, G, Sigma_beta_inv, gamma2_out(i), tau2_out(i));
-// 
-// 
-//     // Sample b
-//     update_b = sample_b_arma(C_lambda, V, gc_tracker, X_s, A, Q_phi, W, G, as<arma::vec>(wrap(beta_out.row(i+1))),
-//                              gamma2_out(i), tau2_out(i), u, w, b_out(i), sigma2_b);
-//     b_out(i+1) = update_b["b"];
-//     ar_b(i) = update_b["accept_reject"];
-//     if(ar_b(i) == 1){
-//       A = calculate_A(C_lambda, V, gc_tracker, b_out(i+1));
-//     }
-// 
-// 
-//     // Sample phi
-//     update_phi = sample_phi_arma(C_lambda, V, gc_tracker, X_s, A, Q_phi, W, G, as<arma::vec>(wrap(beta_out.row(i+1))),
-//                                  gamma2_out(i), tau2_out(i), s, r, phi_out(i), sigma2_phi);
-//     phi_out(i+1) = update_phi["phi"];
-//     ar_phi(i) = update_phi["accept_reject"];
-//     if(ar_phi(i) == 1){
-//       Q_phi = spatial_covariance(s, gc_tracker, phi_out(i+1));
-//     }
-// 
-// 
-//     // Sample tau2
-//     update_tau2 = sample_tau2_arma(gc_tracker, X_s, A, Q_phi, W, G, as<arma::vec>(wrap(beta_out.row(i+1))),
-//                                    gamma2_out(i), tau2_out(i), c_tau, d_tau, sigma2_tau, max_tau2);
-//     tau2_out(i+1) = update_tau2["tau2"];
-//     ar_tau2(i) = update_tau2["accept_reject"];
-// 
-// 
-//     // Sample gamma2
-//     update_gamma2 = sample_gamma2_arma(gc_tracker, X_s, A, Q_phi, W, G, as<arma::vec>(wrap(beta_out.row(i+1))),
-//                                        gamma2_out(i), tau2_out(i), c_gamma, d_gamma, sigma2_gamma, max_gamma2);
-//     gamma2_out(i+1) = update_gamma2["gamma2"];
-//     ar_gamma2(i) = update_gamma2["accept_reject"];
-// 
-// 
-//     // Update MH proposal variances
-//     if(i > 0){
-//       if(i % 50 == 0){
-//         sigma2_b = update_sigma2_tune_arma(sigma2_b, ar_b, i, sigma2_b_min, sigma2_b_rate);
-//         sigma2_phi = update_sigma2_tune_arma(sigma2_phi, ar_phi, i, sigma2_phi_min, sigma2_phi_rate);
-//         sigma2_tau = update_sigma2_tune_arma(sigma2_tau, ar_tau2, i, sigma2_tau_min, sigma2_tau_rate);
-//         sigma2_gamma = update_sigma2_tune_arma(sigma2_gamma, ar_gamma2, i, sigma2_gamma_min, sigma2_gamma_rate);
-//         // save_rds(Rcpp::List::create(Named("beta") = beta_out,
-//         //                             Named("b") = b_out,
-//         //                             Named("ar_b") = ar_b,
-//         //                             Named("phi") = phi_out,
-//         //                             Named("ar_phi") = ar_phi,
-//         //                             Named("tau2") = tau2_out,
-//         //                             Named("ar_tau2") = ar_tau2,
-//         //                             Named("gamma2") = gamma2_out,
-//         //                             Named("ar_gamma2") = ar_gamma2,
-//         //                             Named("MH_sigmas") = arma::vec({sigma2_b, sigma2_phi, sigma2_tau, sigma2_gamma})),
-//         //                             file_name);
-//       }
-//     }
-// 
-//     if(verbose & (i % 100 == 0)){
-//       Rcout << i+1 << " / " << n_iter << " iterations complete. \n";
-//     }
-// 
-//     // double n_secs = timer.toc();
-//     // Rcout << "Number of seconds: " << n_secs << " for full sampler iteration \n";
-//   }
-// 
-//   double n_secs_full = timer_full.toc();
-//   Rcout << "Number of minutes: " << n_secs_full / 60.0 << " to complete full sampler \n";
-// 
-//   return(Rcpp::List::create(Named("beta") = beta_out,
-//                             Named("b") = b_out,
-//                             Named("ar_b") = ar_b,
-//                             Named("phi") = phi_out,
-//                             Named("ar_phi") = ar_phi,
-//                             Named("tau2") = tau2_out,
-//                             Named("ar_tau2") = ar_tau2,
-//                             Named("gamma2") = gamma2_out,
-//                             Named("ar_gamma2") = ar_gamma2,
-//                             Named("MH_sigmas") = arma::vec({sigma2_b, sigma2_phi, sigma2_tau, sigma2_gamma})));
-// 
-// }
-// 
-// 
-// 
-// 
-// 
-// // Non-spatial growth model
-// 
-// //[[Rcpp::export]]
-// arma::rowvec sample_beta_arma_ns(const arma::mat& X_s, const arma::mat& A, const arma::mat& W, 
-//                                  const arma::colvec& G, const arma::mat& Sigma_beta_inv, const double& tau2){
-//   
-//   arma::vec mu = inv_sympd(X_s.t()*A*inv_sympd(tau2*W)*A*X_s + Sigma_beta_inv)*X_s.t()*A*inv_sympd(tau2*W)*G;
-//   arma::mat cov = inv_sympd(X_s.t()*A*inv_sympd(tau2*W)*A*X_s + Sigma_beta_inv);
-//   
-//   arma::vec beta = arma::mvnrnd(mu, cov);
-//   
-//   return(as<arma::rowvec>(wrap(beta)));
-// }
-// 
-// 
-// //[[Rcpp::export]]
-// Rcpp::List sample_b_arma_ns(const Rcpp::List& C_lambda, const arma::mat& V, const arma::uvec& gc_tracker,
-//                             const arma::mat& X_s, const arma::mat& A, const arma::mat& W,
-//                             const arma::colvec& G, const arma::vec& beta, const double& tau2,
-//                             const double& u, const double& w, const double& b, const double& sigma2_b){
-//   
-//   double b_star = R::rnorm(b, sqrt(sigma2_b));
-//   double accept_reject = 0.0;
-//   if(b_star < 0){
-//     return(Rcpp::List::create(Named("b") = b,
-//                               Named("accept_reject") = accept_reject));
-//   }else {
-//     arma::mat new_A = calculate_A(C_lambda, V, gc_tracker, b_star); 
-//     double log_r = (u - 1)*(log(b_star) - log(b)) - w*(b_star - b) -
-//       0.5*as_scalar(trans(G - new_A*X_s*beta)*inv_sympd(tau2*W)*(G - new_A*X_s*beta) - 
-//       trans(G - A*X_s*beta)*inv_sympd(tau2*W)*(G - A*X_s*beta));
-//     if(log(R::runif(0,1)) < log_r){
-//       accept_reject = 1.0;
-//     }else {
-//       b_star = b;
-//     }
-//     
-//   }
-//   
-//   return(Rcpp::List::create(Named("b") = b_star,
-//                             Named("accept_reject") = accept_reject));
-// } 
-// 
-// 
-// 
-// // //[[Rcpp::export]]
-// // double sample_tau2_arma_ns(const arma::uvec& gc_tracker, const arma::mat& X_s, const arma::mat& A,
-// //                            const arma::mat& W, const arma::colvec& G, const arma::vec& beta,
-// //                            const double& tau2, const double& c_tau, const double& d_tau,
-// //                            const double& max_tau2){
-// //   
-// //   double tau2_star = 1.0 / R::rgamma(G.n_elem / 2.0 + c_tau, 1.0 / (.5 * as_scalar(trans(G - A*X_s*beta)*inv_sympd(W)*(G - A*X_s*beta)) + d_tau));
-// //   // Rcout << "tau2_star = " << tau2_star << "\n";
-// //   if(tau2_star < 0 || tau2_star > max_tau2){
-// //     return(tau2);
-// //   }else {
-// //     return(tau2_star);
-// //   }
-// //   
-// // }
-// 
-// //[[Rcpp::export]]
-// double sample_tau2_arma_ns(const arma::uvec& gc_tracker, const arma::mat& X_s, const arma::mat& A,
-//                            const arma::mat& W, const arma::colvec& G, const arma::vec& beta,
-//                            const double& tau2, const double& c_tau, const double& d_tau,
-//                            const double& max_tau2){
-//   
-//   arma::uvec gc_index = find(gc_tracker == 1);
-//   double c_tau_star = c_tau + gc_index.n_elem/2.0;
-//   // Rcout << "Value of gc_index.n_elem = " << gc_index.n_elem << " and /2 = " << gc_index.n_elem/2.0 << "\n";
-//   double d_tau_star = d_tau + 0.5 * as_scalar((trans(G - A*X_s*beta)*inv_sympd(W)*(G - A*X_s*beta)));
-//   double tau2_star = 1.0 / R::rgamma(c_tau_star, 1.0 / d_tau_star);
-//   if(tau2_star < max_tau2){
-//     return(tau2_star);
-//   }else {
-//     return(tau2);
-//   }
-//   
-// }
-// 
-// //[[Rcpp::export]]
-// Rcpp::List run_mcmc_SpRL_growth_arma_ns(const int& n_iter, const arma::mat& Y_mat, const int& N, const double& q,
-//                                         const arma::vec& m, const arma::vec& D_bounds, const double& dist, const Rcpp::List& init_vals,
-//                                         const Rcpp::List& hyperparameters, const Rcpp::List& rasters, const double& int_length, 
-//                                         const std::string& file_name, bool verbose = true){
-//   
-//   // Calculate necessary quantities
-//   int n = Y_mat.n_rows; // Total number of records
-//   arma::rowvec mu_D = { (D_bounds(0) + D_bounds(1))/2.0, (D_bounds(2) + D_bounds(3))/2.0 }; // Midpoint of the spatial domain
-//   arma::mat Y = Y_mat.cols(0,1); // Observed spatial locations
-//   arma::mat V = Y_mat.cols(2,3); // Observed canopy volumes with file designation
-//   double v_max = max(V.col(0));
-//   arma::vec file_id = Y_mat.col(3); // File IDs for each record
-//   
-//   
-//   // Create storage objects for the parameters
-//   arma::vec b_out(n_iter + 1); // Controls how quickly growth mean approaches asymptote
-//   arma::vec ar_b(n_iter);
-//   arma::mat beta_out(n_iter + 1, rasters.size() + 1); // Linear coefficients for covariates w/ intercept
-//   arma::vec tau2_out(n_iter + 1); // Measurement error variance for growths
-//   
-//   
-//   // Hyperparameter values
-//   double u = hyperparameters["u"]; // b
-//   double w = hyperparameters["w"];
-//   double sigma2_b_min = as<double>(wrap(hyperparameters["sigma2_b_min"]));
-//   double sigma2_b_rate = as<double>(wrap(hyperparameters["sigma2_b_rate"]));
-//   arma::mat Sigma_beta_inv = arma::inv_sympd(as<arma::mat>(wrap(hyperparameters["Sigma_beta"]))); // Beta
-//   double c_tau = hyperparameters["c_tau"]; // tau2
-//   double d_tau = hyperparameters["d_tau"];
-//   double max_tau2 = hyperparameters["max_tau2"];
-//   
-//   
-//   // Initialize the parameter values for the sampler
-//   arma::uvec lambda = init_vals["lambda"];
-//   arma::mat s = init_vals["s"];
-//   b_out(0) = init_vals["b"];
-//   double sigma2_b = as<double>(wrap(init_vals["sigma2_b"]));
-//   arma::rowvec beta_init = init_vals["beta"];
-//   beta_out.row(0) = beta_init;
-//   tau2_out(0) = init_vals["tau2"];
-//   
-//   
-//   // Create the linkage set C and the growth cluster index and initialize relevant storage
-//   List C_lambda = create_clusters(lambda);
-//   arma::uvec gc_tracker = growth_cluster_check(C_lambda, V, q);
-//   Rcpp::List update_b(2);
-//   arma::mat X_s = update_covars_arma(s, rasters);
-//   // Rcout << "X_s size " << X_s.n_rows << "\n";
-//   X_s = X_s.rows(find(gc_tracker == 1));
-//   // Rcout << "X_s size " << X_s.n_rows << "\n";
-//   arma::colvec G = calculate_growth(C_lambda, gc_tracker, V, int_length);
-//   // Rcout << "G size " << G.n_elem << "\n";
-//   // arma::mat W = calculate_W(C_lambda, V, gc_tracker, v_max);
-//   arma::mat W(G.n_elem, G.n_elem, arma::fill::eye);
-//   
-//   if(verbose){
-//     Rcout << "Sampler initialized. \n";
-//   }
-//   
-//   // arma::wall_clock timer;
-//   arma::wall_clock timer_full;
-//   timer_full.tic();
-//   
-//   for(arma::uword i = 0; i < n_iter; i++){
-//     
-//     // timer.tic();
-//     arma::mat A = calculate_A(C_lambda, V, gc_tracker, b_out(i));
-//     
-//     
-//     // Sample Beta
-//     beta_out.row(i+1) = sample_beta_arma_ns(X_s, A, W, G, Sigma_beta_inv, tau2_out(i));
-//     
-//     
-//     // Sample b
-//     update_b = sample_b_arma_ns(C_lambda, V, gc_tracker, X_s, A, W, G, as<arma::vec>(wrap(beta_out.row(i+1))),
-//                                 tau2_out(i), u, w, b_out(i), sigma2_b);
-//     b_out(i+1) = update_b["b"];
-//     ar_b(i) = update_b["accept_reject"];
-//     if(ar_b(i) == 1){
-//       A = calculate_A(C_lambda, V, gc_tracker, b_out(i+1));
-//     }
-//     
-//     
-//     // Sample tau2
-//     tau2_out(i+1) = sample_tau2_arma_ns(gc_tracker, X_s, A, W, G, as<arma::vec>(wrap(beta_out.row(i+1))),
-//                                         tau2_out(i), c_tau, d_tau, max_tau2);
-//     
-//     
-//     // Update MH proposal variances
-//     if(i > 0){
-//       if(i % 50 == 0){
-//         sigma2_b = update_sigma2_tune_arma(sigma2_b, ar_b, i, sigma2_b_min, sigma2_b_rate);
-//         // Rcout << "Acceptance rate = " << mean(ar_b(arma::span((i-49), i))) << " and new sigma2_b = " << sigma2_b << "\n";
-//         // save_rds(Rcpp::List::create(Named("beta") = beta_out,
-//         //                             Named("b") = b_out,
-//         //                             Named("ar_b") = ar_b,
-//         //                             Named("phi") = phi_out,
-//         //                             Named("ar_phi") = ar_phi,
-//         //                             Named("tau2") = tau2_out,
-//         //                             Named("ar_tau2") = ar_tau2,
-//         //                             Named("gamma2") = gamma2_out,
-//         //                             Named("ar_gamma2") = ar_gamma2,
-//         //                             Named("MH_sigmas") = arma::vec({sigma2_b, sigma2_phi, sigma2_tau, sigma2_gamma})),
-//         //                             file_name);
-//       }
-//     }
-//     
-//     if(verbose & (i % 100 == 0)){
-//       Rcout << i+1 << " / " << n_iter << " iterations complete. \n";
-//     }
-//     
-//     // double n_secs = timer.toc();
-//     // Rcout << "Number of seconds: " << n_secs << " for full sampler iteration \n";
-//   }
-//   
-//   double n_secs_full = timer_full.toc();
-//   Rcout << "Number of minutes: " << n_secs_full / 60.0 << " to complete full sampler \n";
-//   
-//   return(Rcpp::List::create(Named("beta") = beta_out,
-//                             Named("b") = b_out,
-//                             Named("ar_b") = ar_b,
-//                             Named("tau2") = tau2_out,
-//                             Named("MH_sigmas") = arma::vec({sigma2_b})));
-//   
-// }
-
+// Function to calculate Larger Neighbor Volume (LNV), Neighborhood Density (ND), and Relative Spacing Index (RSI)
+// within a specified radius
+// [[Rcpp::export]]
+arma::mat calc_comp_indices_arma2(const arma::mat& treeData, const double& radius = 15.0) {
+  
+  int n = treeData.n_rows;
+  arma::mat indices(n, 3); // Initialize matrix for comp metrics
+  
+  for (int i = 0; i < n; i++) {
+    double x1 = treeData(i, 0);
+    double y1 = treeData(i, 1);
+    double size1 = treeData(i, 2);
+    
+    double LNV = 0.0; // Initialize LNV
+    double AND = 0.0; // Initialize AND
+    double ND = 0.0; // Initialize ND
+    double dnn = radius; // Initialize DNN to a large value
+    double RSI = 0.0; // Initialize RSI
+    
+    double neighbor_counter = 0.0;
+    
+    for (int j = 0; j < n; j++) {
+      if (i != j) { // Exclude the current tree from calculations
+        double x2 = treeData(j, 0);
+        double y2 = treeData(j, 1);
+        double size2 = treeData(j, 2);
+        
+        double distance = euclidean_dist_arma(x1, y1, x2, y2);
+        
+        if (distance <= radius) { // Consider trees within the specified radius
+          // Update BAN by adding the basal area of the neighbor
+          if(size2 > size1){
+            LNV += size2;
+          }
+          // Update AND if the current neighbor is within the specified radius
+          AND += distance;
+          neighbor_counter += 1.0;
+          
+          if(dnn < distance){
+            dnn = distance;
+          }
+        }
+      }
+    }
+    
+    if(neighbor_counter > 0.0){
+      AND = AND / neighbor_counter;
+      ND = neighbor_counter / (arma::datum::pi * pow(radius, 2));
+    } else{
+      AND = radius;
+    }
+    
+    RSI = dnn / AND;
+    
+    indices(i, 0) = LNV;
+    indices(i, 1) = RSI;
+    indices(i, 2) = ND;
+  }
+  
+  return indices;
+}

@@ -1,8 +1,8 @@
-#########################################################################################################
-#### This script runs the growth portion of the two-stage model for the spatial record linkage model ####
-#########################################################################################################
+############################################################################################
+#### This script runs the growth portion of the two-stage model for the empirical data. ####
+############################################################################################
 
-# pass from command line ----
+# Arguments from command line ----
 args <- commandArgs(trailingOnly=TRUE)
 covars <- args[1]
 index <- as.numeric(args[2])
@@ -21,10 +21,12 @@ library(dplyr)
 library(data.table)
 library(loo)
 
-
-sourceCpp('./code/cpp_code/two_stage_func.cpp')
+## Optional parallelization for rstan
 rstan_options(auto_write = FALSE)
 options(mc.cores = parallel::detectCores())
+
+## Source necessary C++ helper functions
+sourceCpp('./resources/code/cpp_code/two_stage_func.cpp')
 
 ## Set seed for reproducibility ----
 set.seed(90210)
@@ -41,13 +43,13 @@ b_y2 <- b_y - 15
 
 
 ## Read in and process the specified dataset
-file2015 <- read_csv("./data/UER_lidar_canopy_segmentation/crown_attributes_2015.csv", show_col_types = FALSE) %>%
+file2015 <- read_csv("./resources/empirical_data/UER_lidar_canopy_segmentation/crown_attributes_2015.csv", show_col_types = FALSE) %>%
   filter(LCmajority == 1) %>%
   select(XTOP, YTOP, CANVOL2015) %>%
   filter(XTOP > a_x & XTOP < b_x & YTOP > a_y & YTOP < b_y) %>%
   rename(x = XTOP, y = YTOP, size = CANVOL2015) %>%
   mutate(file = 1)
-file2019 <- read_csv("./data/UER_lidar_canopy_segmentation/crown_attributes_2019.csv", show_col_types = FALSE) %>%
+file2019 <- read_csv("./resources/empirical_data/UER_lidar_canopy_segmentation/crown_attributes_2019.csv", show_col_types = FALSE) %>%
   filter(LCmajority == 1) %>%
   select(XTOP, YTOP, CANVOL2019) %>%
   filter(XTOP > a_x & XTOP < b_x & YTOP > a_y & YTOP < b_y) %>%
@@ -60,61 +62,34 @@ scan_data <- rbind(file2015, file2019)
 in_bounds_full <- which((scan_data$x > a_x2 & scan_data$x < b_x2 & scan_data$y > a_y2 & scan_data$y < b_y2 & scan_data$file == 1) | (scan_data$file == 2))
 
 
-CM <- read_csv("./data/comp_metrics_2015_RSI.csv", show_col_types = FALSE) %>%
+CM <- read_csv("./2_empirical_analysis/competition_metrics_2015.csv", show_col_types = FALSE) %>%
   filter(XTOP > a_x2 & XTOP < b_x2 & YTOP > a_y2 & YTOP < b_y2) %>%
   select(LNV_norm, RSI_norm, ND_norm) %>%
   as.matrix()
 
-if(covars == "all"){
-  
-  ## Read in the raster data for the covariates of interest
-  southness.rast <- scale(rast('./data/Snodgrass_aspect_southness_1m.tif'))
-  wetness.rast <- scale(rast('./data/Snodgrass_wetness_index_1m.tif'))
-  GDD.rast <- scale(rast('./data/Snodgrass_Degree_Days_2013_2019.tif'))
-  SPP.rast <- scale(rast('./data/Snodgrass_Snowpack_Persistence_DOY_2013_2019.tif'))
-  
-  
-  ## Crop the rasters to D* and discard the originals
-  southness <- crop(southness.rast, ext(a_x, b_x, a_y, b_y))
-  wetness <- crop(wetness.rast, ext(a_x, b_x, a_y, b_y))
-  spp <- crop(SPP.rast, ext(a_x, b_x, a_y, b_y))
-  gdd <- crop(GDD.rast, ext(a_x, b_x, a_y, b_y))
-  rm(southness.rast, wetness.rast, SPP.rast, GDD.rast)
-  
-  raster_list <- c(list(wetness), list(southness),
-                   lapply(2:6, function(x) spp[[x]]), lapply(2:6, function(x) gdd[[x]]),
-                   lapply(2:6, function(x) spp[[x]]*wetness), lapply(2:6, function(x) gdd[[x]]*wetness))
-  
-  
-}else if(covars == "subset"){
-  
-  ## Read in the raster data for the covariates of interest
-  southness.rast <- scale(rast('./data/Snodgrass_aspect_southness_1m.tif'))
-  wetness.rast <- scale(rast('./data/Snodgrass_wetness_index_1m.tif'))
-  GDD.rast <- scale(rast('./data/Snodgrass_Degree_Days_2013_2019.tif'))
-  SPP.rast <- scale(rast('./data/Snodgrass_Snowpack_Persistence_DOY_2013_2019.tif'))
-  
-  
-  ## Crop the rasters to D* and discard the originals
-  southness <- crop(southness.rast, ext(a_x, b_x, a_y, b_y))
-  wetness <- crop(wetness.rast, ext(a_x, b_x, a_y, b_y))
-  spp <- crop(SPP.rast, ext(a_x, b_x, a_y, b_y))
-  gdd <- crop(GDD.rast, ext(a_x, b_x, a_y, b_y))
-  rm(southness.rast, wetness.rast, SPP.rast, GDD.rast)
-  
-  raster_list <- c(list(wetness), list(southness),
-                   lapply(2:6, function(x) spp[[x]]), lapply(2:6, function(x) gdd[[x]]),
-                   lapply(2:6, function(x) spp[[x]]*wetness), lapply(2:6, function(x) gdd[[x]]*wetness))
-  
-}
 
-
-# linkage_file <- paste0("./code/empirical_data/empirical_linkage_lambda_pooled.csv")
-# latent_file <- paste0("./code/empirical_data/empirical_linkage_s_pooled.csv")
-# sample_index <- fread(file = "./code/empirical_data/LA_sample_index_pooled.csv", header = FALSE) %>% as.matrix()
-linkage_file <- paste0("./code/empirical_data/empirical_linkage_lambda_pooled_N_25.csv")
-latent_file <- paste0("./code/empirical_data/empirical_linkage_s_pooled_N_25.csv")
-sample_index <- fread(file = "./code/empirical_data/LA_sample_index_pooled_N_25.csv", header = FALSE) %>% as.matrix()
+  
+## Read in the raster data for the covariates of interest
+southness.rast <- scale(rast('./resources/empirical_data/Snodgrass_aspect_southness_1m.tif'))
+wetness.rast <- scale(rast('./resources/empirical_data/Snodgrass_wetness_index_1m.tif'))
+GDD.rast <- scale(rast('./resources/empirical_data/Snodgrass_Degree_Days_2013_2019.tif'))
+SPP.rast <- scale(rast('./resources/empirical_data/Snodgrass_Snowpack_Persistence_DOY_2013_2019.tif'))
+  
+## Crop the rasters to D* and discard the originals
+southness <- crop(southness.rast, ext(a_x, b_x, a_y, b_y))
+wetness <- crop(wetness.rast, ext(a_x, b_x, a_y, b_y))
+spp <- crop(SPP.rast, ext(a_x, b_x, a_y, b_y))
+gdd <- crop(GDD.rast, ext(a_x, b_x, a_y, b_y))
+rm(southness.rast, wetness.rast, SPP.rast, GDD.rast)
+  
+raster_list <- c(list(wetness), list(southness),
+                 lapply(2:6, function(x) spp[[x]]), lapply(2:6, function(x) gdd[[x]]),
+                 lapply(2:6, function(x) spp[[x]]*wetness), lapply(2:6, function(x) gdd[[x]]*wetness))
+  
+  
+linkage_file <- paste0("./2_empirical_analysis/model_results/record_linkage_model/empirical_linkage_lambda_pooled_N_25.csv")
+latent_file <- paste0("./2_empirical_analysis/model_results/record_linkage_model/empirical_linkage_s_pooled_N_25.csv")
+sample_index <- fread(file = "./2_empirical_analysis/empirical_data/LA_sample_index_pooled_N_25.csv", header = FALSE) %>% as.matrix()
 current_index <- sample_index[index]
 
 
@@ -126,7 +101,6 @@ s_configs <- vector2matrix(latent_sample, dim = c(ncol(latent_sample)/2, 2))
 rm(latent_sample)
 
 ## Obtain the thinned linkage and corresponding latents for the two-stage model
-
 N <- dim(s_configs)[2]
 
 
@@ -244,26 +218,16 @@ X <- update_covars_arma(s, raster_list)
 gc_index <- which(M == 0)
 N <- length(gc_index)
 
-if(covars == "all"){
-  
-  X_new <- cbind(X[,2:3],
-                 apply(X[,4:8], 1, median),
-                 apply(X[,9:13], 1, median),
-                 apply(X[,14:18], 1, median),
-                 apply(X[,19:23], 1, median),
-                 linked_data$lnv_norm,
-                 linked_data$rsi_norm,
-                 linked_data$nd_norm)
 
-}else if(covars == "subset"){
-  
-  X_new <- cbind(X[,2:3],
-                 apply(X[,4:8], 1, median),
-                 apply(X[,9:13], 1, median),
-                 apply(X[,14:18], 1, median),
-                 apply(X[,19:23], 1, median))
-  
-}
+X_new <- cbind(X[,2:3],
+               apply(X[,4:8], 1, median),
+               apply(X[,9:13], 1, median),
+               apply(X[,14:18], 1, median),
+               apply(X[,19:23], 1, median),
+               linked_data$lnv_norm,
+               linked_data$rsi_norm,
+               linked_data$nd_norm)
+
 
 # Run the growth model
 stan_growth_data_2stage = list(N = N, # Number of Obs
@@ -287,7 +251,7 @@ stan_growth_data_2stage = list(N = N, # Number of Obs
 
 if(model_type == "skew_t"){
   
-  stanfit_2stage <- stan(file = "./code/STAN_models/STAN_growth_mod_skew_t_test2.stan", # Stan file
+  stanfit_2stage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_skew_t.stan", # Stan file
                          data = stan_growth_data_2stage, # Data
                          iter = 5000,
                          chains = 4,
@@ -295,7 +259,7 @@ if(model_type == "skew_t"){
   
 }else if(model_type == "skew_normal"){
   
-  stanfit_2stage <- stan(file = "./code/STAN_models/STAN_growth_mod_skew_normal2.stan", # Stan file
+  stanfit_2stage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_skew_normal.stan", # Stan file
                          data = stan_growth_data_2stage, # Data
                          iter = 5000,
                          chains = 4,
@@ -303,7 +267,7 @@ if(model_type == "skew_t"){
   
 }else if(model_type == "normal"){
   
-  stanfit_2stage <- stan(file = "./code/STAN_models/STAN_growth_mod_alpha.stan", # Stan file
+  stanfit_2stage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_alpha.stan", # Stan file
                          data = stan_growth_data_2stage, # Data
                          iter = 5000,
                          chains = 4,
@@ -320,7 +284,7 @@ if(model_type == "skew_t"){
                                      mu_0 = rep(0, ncol(X_MLR)),
                                      sig20 = diag(rep(2.5, ncol(X_MLR))))
   
-  stanfit_2stage <- stan(file = "./code/STAN_models/STAN_growth_mod_MLR.stan", # Stan file
+  stanfit_2stage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_MLR.stan", # Stan file
                          data = stan_growth_data_2stage_MLR, # Data
                          iter = 5000,
                          chains = 4,
@@ -328,23 +292,19 @@ if(model_type == "skew_t"){
   
 }
 
-
 growth_results <- rstan::extract(stanfit_2stage, permuted = TRUE)
 growth_results_df <- as.data.frame(growth_results[!names(growth_results) %in% c("y_rep1", "y_rep2", "mu")])
 
 y_rep1 <- as.data.frame(growth_results["y_rep1"])
 y_rep2 <- as.data.frame(growth_results["y_rep2"])
-
 calc_scrps <- scrps(as.matrix(y_rep1), as.matrix(y_rep2), G[gc_index])$pointwise
 
 
 ## Save the results
-# la_results_file <- paste0("./code/empirical_data/emp_LA_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, ".csv")
-la_results_file <- paste0("./code/empirical_data/final_run/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, ".csv")
-rep1_results_file <- paste0("./code/empirical_data/final_run/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_rep1.csv")
-rep2_results_file <- paste0("./code/empirical_data/final_run/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_rep2.csv")
-scrps_results_file <- paste0("./code/empirical_data/final_run/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_scrps_ests.csv")
-
+la_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, ".csv")
+rep1_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_rep1.csv")
+rep2_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_rep2.csv")
+scrps_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_scrps_ests.csv")
 
 write_csv(growth_results_df, file = la_results_file)
 write_csv(y_rep1, file = rep1_results_file)
