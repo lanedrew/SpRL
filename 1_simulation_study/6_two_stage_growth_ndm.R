@@ -60,7 +60,8 @@ file2_mat <- scan_data %>% filter(file == 2) %>% select(x, y) %>% as.matrix()
 lambda <- nearest_distance_matching(file_1 = file1_mat, file_2 = file2_mat, dist = 2)
 
 ## Save the linkage and process the linkage performance
-linkage_file <- paste0("./1_simulation_study/simulation_results/NDM/linkage/", density, "_dens_", noise, "_noise_", alpha, "_alpha_sim_", index, "_NDM_linkage_results.csv")
+linkage_file <- paste0("./1_simulation_study/simulation_results/NDM/linkage/", density, "_dens_", noise, "_noise_",
+                       alpha, "_alpha_sim_", index, "_NDM_linkage_results.csv")
 write_csv(as.data.frame(lambda), linkage_file)
 
 linkage_res <- do.call(cbind, eval_links(z = t(lambda), true_id = scan_data$id))
