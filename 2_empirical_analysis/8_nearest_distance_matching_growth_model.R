@@ -1,14 +1,10 @@
-############################################################################################
-#### This script runs the growth portion of the two-stage model for the empirical data. ####
-############################################################################################
+###########################################################################################
+#### This script runs the growth model using the NDM linkage on the empirical dataset. ####
+###########################################################################################
 
 # Arguments from command line ----
 args <- commandArgs(trailingOnly=TRUE)
-covars <- args[1]
-index <- as.numeric(args[2])
-mort_threshold <- args[3]
-model_type <- args[4]
-
+mort_threshold <- args[1]
 
 ## Load libraries and sampler functions ----
 library(rstan) ## for growth model fit
@@ -19,7 +15,6 @@ library(RcppDist)
 library(terra)
 library(dplyr)
 library(data.table)
-library(loo)
 
 ## Optional parallelization for rstan
 rstan_options(auto_write = FALSE)
@@ -61,12 +56,10 @@ scan_data <- rbind(file2015, file2019)
 
 in_bounds_full <- which((scan_data$x > a_x2 & scan_data$x < b_x2 & scan_data$y > a_y2 & scan_data$y < b_y2 & scan_data$file == 1) | (scan_data$file == 2))
 
-
 CM <- read_csv("./2_empirical_analysis/competition_metrics_2015.csv", show_col_types = FALSE) %>%
   filter(XTOP > a_x2 & XTOP < b_x2 & YTOP > a_y2 & YTOP < b_y2) %>%
   select(LNV_norm, RSI_norm, ND_norm) %>%
   as.matrix()
-
 
   
 ## Read in the raster data for the covariates of interest
@@ -75,6 +68,7 @@ wetness.rast <- scale(rast('./resources/empirical_data/Snodgrass_wetness_index_1
 GDD.rast <- scale(rast('./resources/empirical_data/Snodgrass_Degree_Days_2013_2019.tif'))
 SPP.rast <- scale(rast('./resources/empirical_data/Snodgrass_Snowpack_Persistence_DOY_2013_2019.tif'))
   
+
 ## Crop the rasters to D* and discard the originals
 southness <- crop(southness.rast, ext(a_x, b_x, a_y, b_y))
 wetness <- crop(wetness.rast, ext(a_x, b_x, a_y, b_y))
@@ -85,23 +79,11 @@ rm(southness.rast, wetness.rast, SPP.rast, GDD.rast)
 raster_list <- c(list(wetness), list(southness),
                  lapply(2:6, function(x) spp[[x]]), lapply(2:6, function(x) gdd[[x]]),
                  lapply(2:6, function(x) spp[[x]]*wetness), lapply(2:6, function(x) gdd[[x]]*wetness))
-  
-  
-linkage_file <- paste0("./2_empirical_analysis/model_results/record_linkage_model/empirical_linkage_lambda_pooled_N_25.csv")
-latent_file <- paste0("./2_empirical_analysis/model_results/record_linkage_model/empirical_linkage_s_pooled_N_25.csv")
-sample_index <- fread(file = "./2_empirical_analysis/empirical_data/LA_sample_index_pooled_N_25.csv", header = FALSE) %>% as.matrix()
-current_index <- sample_index[index]
 
 
-linkage_sample <- fread(file = linkage_file, skip = current_index, header = FALSE, nrows = 1) %>% as.matrix()
-latent_sample <- fread(file = latent_file, skip = current_index, header = FALSE, nrows = 1) %>% as.matrix()
-
+linkage_file <- paste0("./2_empirical_analysis/model_results/record_linkage_model/near_distance_matching_lambda.csv")
+linkage_sample <- read_csv(file = linkage_file, col_names = TRUE) %>% as.matrix()
 linkage_sample <- linkage_sample + 1
-s_configs <- vector2matrix(latent_sample, dim = c(ncol(latent_sample)/2, 2))
-rm(latent_sample)
-
-## Obtain the thinned linkage and corresponding latents for the two-stage model
-N <- dim(s_configs)[2]
 
 
 ## Run the growth model for the thinned lambda configurations with appropriate latents
@@ -111,9 +93,8 @@ data_per_it$id <- linkage_sample[in_bounds_full]
 lnv_norm <- unsplit(lapply(split(CM[,1], data_per_it$id[1:length(in_bounds)]), mean), data_per_it$id[1:length(in_bounds)])
 rsi_norm <- unsplit(lapply(split(CM[,2], data_per_it$id[1:length(in_bounds)]), mean), data_per_it$id[1:length(in_bounds)])
 nd_norm <- unsplit(lapply(split(CM[,3], data_per_it$id[1:length(in_bounds)]), mean), data_per_it$id[1:length(in_bounds)])
-data_per_it$x <- s_configs[c(data_per_it$id), 1]
-data_per_it$y <- s_configs[c(data_per_it$id), 2]
-
+data_per_it$x <- unsplit(lapply(split(data_per_it$x, data_per_it$id), mean), data_per_it$id)
+data_per_it$y <- unsplit(lapply(split(data_per_it$y, data_per_it$id), mean), data_per_it$id)
 
 data_file_1 <- data_per_it %>%
   filter(file == 1) %>%
@@ -178,7 +159,8 @@ if(length(data_file_2$id) != length(unique(data_file_2$id))){
 ## Merge the two files after merging records within the same files
 linked_data <- inner_join(data_file_1, data_file_2, by = "id")
 linked_data <- linked_data %>% mutate(est_growth = (size.y - size.x)/4,
-                                      delta_can = (size.y - size.x)/size.x)
+                                      delta_can = (size.y - size.x)/size.x,
+                                      log_est_growth = log(est_growth))
 
 
 linked_data$est_mort <- NA
@@ -213,11 +195,10 @@ if(mort_threshold == "80"){
 G <- linked_data$est_growth
 M <- as.numeric(linked_data$est_mort)
 S_1 <- as.numeric(linked_data$size.x)
+S_2 <- as.numeric(linked_data$size.y)
 s <- cbind(linked_data$x.x, linked_data$y.x)
 X <- update_covars_arma(s, raster_list)
-gc_index <- which(M == 0)
-N <- length(gc_index)
-
+  
 X_new <- cbind(X[,2:3],
                apply(X[,4:8], 1, median),
                apply(X[,9:13], 1, median),
@@ -229,83 +210,30 @@ X_new <- cbind(X[,2:3],
 
 
 # Run the growth model
-stan_growth_data_2stage = list(N = N, # Number of Obs
-                               K = ncol(X_new),
-                               G = G[gc_index],
-                               S = S_1[gc_index],
-                               X = X_new[gc_index,],
+stan_growth_data_2stage = list(N = length(G[which(M == 0)]), # Number of Obs
+                               G = G[which(M == 0)],
                                mu_0 = rep(0, ncol(X_new)),
+                               S = S_1[which(M == 0)],
                                sig20 = diag(rep(2.5, ncol(X_new))),
-                               c = .001,
-                               d = .001,
+                               K = ncol(X_new),
+                               X = X_new[which(M == 0),],
+                               c = .0001,
+                               d = .0001,
+                               max_tau2 = 75,
                                a_alpha = 1,
-                               b_alpha = 1,
-                               nu_beta = 2,
-                               nu_delta = 2,
-                               mu_delta = 0,
-                               sigma_delta = .1,
-                               h_1 = .1,
-                               gamma_max = max(file2015$size))
+                               b_alpha = 1)  
 
 
-if(model_type == "skew_t"){
-  
-  stanfit_2stage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_skew_t.stan", # Stan file
-                         data = stan_growth_data_2stage, # Data
-                         iter = 5000,
-                         chains = 4,
-                         thin = 5) # Number of chains to run
-  
-}else if(model_type == "skew_normal"){
-  
-  stanfit_2stage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_skew_normal.stan", # Stan file
-                         data = stan_growth_data_2stage, # Data
-                         iter = 5000,
-                         chains = 4,
-                         thin = 5) # Number of chains to run
-  
-}else if(model_type == "normal"){
-  
-  stanfit_2stage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_alpha.stan", # Stan file
-                         data = stan_growth_data_2stage, # Data
-                         iter = 5000,
-                         chains = 4,
-                         thin = 5) # Number of chains to run
-  
-}else if(model_type == "MLR"){
-  
-  X_MLR <- cbind(scale(S_1[gc_index]), X_new[gc_index,])
-  
-  stan_growth_data_2stage_MLR = list(N = N, # Number of Obs
-                                     K = ncol(X_MLR),
-                                     G = G[gc_index],
-                                     X = X_MLR,
-                                     mu_0 = rep(0, ncol(X_MLR)),
-                                     sig20 = diag(rep(2.5, ncol(X_MLR))))
-  
-  stanfit_2stage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_MLR.stan", # Stan file
-                         data = stan_growth_data_2stage_MLR, # Data
-                         iter = 5000,
-                         chains = 4,
-                         thin = 5)
-  
-}
+stanfit_2stage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_alpha.stan", # Stan file
+                       data = stan_growth_data_2stage, # Data
+                       warmup = 10000, # Number of iteration to burn-in
+                       iter = 20000, # Total number of iterations
+                       chains = 4, # Number of chains to run
+                       thin = 10)
 
 growth_results <- rstan::extract(stanfit_2stage, permuted = TRUE)
-growth_results_df <- as.data.frame(growth_results[!names(growth_results) %in% c("y_rep1", "y_rep2", "mu")])
-
-y_rep1 <- as.data.frame(growth_results["y_rep1"])
-y_rep2 <- as.data.frame(growth_results["y_rep2"])
-calc_scrps <- scrps(as.matrix(y_rep1), as.matrix(y_rep2), G[gc_index])$pointwise
-
+growth_results <- as.data.frame(growth_results)
 
 ## Save the results
-la_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, ".csv")
-rep1_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_rep1.csv")
-rep2_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_rep2.csv")
-scrps_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_scrps_ests.csv")
-
-write_csv(growth_results_df, file = la_results_file)
-write_csv(y_rep1, file = rep1_results_file)
-write_csv(y_rep2, file = rep2_results_file)
-write_csv(as.data.frame(calc_scrps), file = scrps_results_file)
+ndm_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/NDM/nearest_distance_matching_growth_cutoff_", mort_threshold, ".csv")
+write_csv(growth_results, file = ndm_results_file)
