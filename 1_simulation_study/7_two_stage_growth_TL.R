@@ -143,5 +143,6 @@ stanfit_true_linkage <- stan(file = "./resources/code/STAN_code/STAN_growth_mod_
 growth_results <- as.data.frame(do.call(cbind, rstan::extract(stanfit_true_linkage, permuted = TRUE)))
 
 ## Save the results
-results_file <- paste0("./1_simulation_study/simulation_results/true_linkage/", density, "_density_", noise, "_noise_", alpha, "_alpha_", index, "_growth_results_TL.csv")
+results_file <- paste0("./1_simulation_study/simulation_results/true_linkage/", density, "_density_", noise, "_noise_",
+                       alpha, "_alpha_", index, "_growth_results_TL.csv")
 write_csv(growth_results, file = results_file)

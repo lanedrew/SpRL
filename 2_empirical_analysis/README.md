@@ -14,6 +14,7 @@ We note that many of these scripts are designed to be run on an HPC utilizing pa
 
 ### (Timing Results)
 - Box Margin: "1" "2" "3" "5" "10" "25" "50" "100" "150" "200" "300"
+- Area Size: "100" "150" "200" "300"
 
 ## Script Descriptions
 We provide descriptions of each script in the sequence below.
@@ -56,4 +57,4 @@ We provide descriptions of each script in the sequence below.
 
 10. 10_generate_timing_results.R
 
-    This script generates the timing results for the record linkage model fit to the empirical data given a set of input arguments (see above).
+    This script generates the timing results for the record linkage model fit to subsets of the empirical data given a set of input arguments (see above).
