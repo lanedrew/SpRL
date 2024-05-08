@@ -35,7 +35,7 @@ We provide descriptions of each script in the sequence below.
   
 5. 5_two_stage_growth_LA.R: 
 
-    This scripts runs the downstream growth model on a simulated dataset given a posterior linkage sample and a set of input arguments (see above).
+    This script runs the downstream growth model on a simulated dataset given a posterior linkage sample and a set of input arguments (see above).
   
 6. 6_two_stage_growth_NDM.R: 
 
