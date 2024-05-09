@@ -199,6 +199,8 @@ S_1 <- as.numeric(linked_data$size.x)
 S_2 <- as.numeric(linked_data$size.y)
 s <- cbind(linked_data$x.x, linked_data$y.x)
 X <- update_covars_arma(s, raster_list)
+gc_index <- which(M == 0)
+N <- length(gc_index)
   
 X_new <- cbind(X[,2:3],
                apply(X[,4:8], 1, median),
@@ -286,11 +288,15 @@ calc_scrps <- scrps(as.matrix(y_rep1), as.matrix(y_rep2), G[gc_index])$pointwise
 
 
 ## Save the results
+ndm_growths_file <- paste0("./2_empirical_analysis/model_results/growth_model/NDM/nearest_distance_matching_growth_cutoff_", mort_threshold, "_growths.csv")
 ndm_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/NDM/nearest_distance_matching_model_", model_type, "_growth_cutoff_", mort_threshold, ".csv")
 rep1_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/NDM/nearest_distance_matching_model_", model_type, "_growth_cutoff_", mort_threshold, "_rep1.csv")
 rep2_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/NDM/nearest_distance_matching_model_", model_type, "_growth_cutoff_", mort_threshold, "_rep2.csv")
 scrps_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/NDM/nearest_distance_matching_model_", model_type, "_growth_cutoff_", mort_threshold, "_scrps_ests.csv")
 
+if(!file.exists(ndm_growths_file)){
+  write_csv(data.frame(growth = G[gc_index]), ndm_growths_file)
+}
 write_csv(growth_results_df, file = ndm_results_file)
 write_csv(y_rep1, file = rep1_results_file)
 write_csv(y_rep2, file = rep2_results_file)

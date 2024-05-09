@@ -8,7 +8,11 @@ The folders contained in this appendix are:
 3. 3_figures_and_tables
 4. resources
 
-The folders and code within each folder are provided in the order they should be run. The resources folder contains supporting code (R, C++, STAN) and a placeholder folder for the empirical data used in this analysis.
+The folders and code within each folder are provided in the order they should be run. The resources folder contains supporting code (R, C++, STAN) and a placeholder folder for the empirical data used in this analysis. The empirical data can be obtained from the following ESS-DIVE repository and should be placed into the empirical_data folder within the resources folder (see the README file in that folder for additional details).
+
+Empirical Data: https://data.ess-dive.lbl.gov/view/ess-dive-32482a38131d613-20240503T212244619
+
+All analyses for this project were run on an HPC system using shell scripts, which an interested user should take advantage of for parallel computing.
 
 ## Dependencies
 
@@ -51,5 +55,4 @@ The following is a list of packages and technologies that must be installed and 
 33. ggpubr (CRAN)
 34. latex2exp (CRAN)
 35. gtools (CRAN)
-36. GGally (CRAN)
-37. mcclust (CRAN)
+36. mcclust (CRAN)

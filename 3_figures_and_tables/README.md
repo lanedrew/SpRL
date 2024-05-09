@@ -1,45 +1,45 @@
 # Figures and Tables
-The numbered scripts in this folder can be run to recreate the figures and tables appearing in the paper (excluding Table 1, Table 2, and wFigure 2). Scripts should be run in increasing numerical order and the order of generation reflects the order of appearance in the paper.
+The numbered scripts in this folder can be run to recreate the figures and tables appearing in the paper (excluding Table 1, Table 2, and Figure 2). Scripts should be run in increasing numerical order and the order of generation reflects the order of appearance in the paper (including figures and tables in the supplementary materials).
 
 ## Script Descriptions
 We provide descriptions of each script in the sequence below.
 
-1. 1_two_stage_RL_full.R: 
+1. 1_generate_empirical_data_raster_plots.R: 
 
-    This script runs the initial sampling period for the full empirical dataset given a set of input arguments (see above).
+    This script generates Figure 1 from the paper.
   
-2. 2_two_stage_RL_full_ext.R: 
+2. 2_generate_timing_results_plots.R: 
 
-    This script runs the extended sampling period for the full empirical dataset given a set of input arguments (see above).
+    This script generates Figures 3 and 4 from the paper.
   
-3. 3_generate_competition_metrics.R: 
+3. 3_generate_empirical_coverage_comparison_plot.R: 
 
-    This script generates the competition metric covariates for the 2015 and 2019 datasets.
+    This script generates Figure 5 from the paper.
   
-4. 4_pool_linkage_chains.R: 
+4. 4_generate_predicted_growth_curve_plot.R: 
 
-    This script pools the results from the multiple linkage chains generated in steps 1 and 2.
+    This script generates Figure 6 from the paper.
   
-5. 5_generate_pooled_sample_index.R: 
+5. 5_generate_data_realization_plot.R: 
 
-    This script generates the random sample index for fitting the downstream model using the LA approach.
+    This script generates Figure 7 from the paper.
   
-6. 6_two_stage_growth_full_LA.R: 
+6. 6_generate_simulated_linkage_performance_comparison_plot.R: 
 
-    This script runs the downstream growth model on the empirical data given a posterior linkage sample and a set of input arguments (see above).
+    This script generates Figure 8 from the paper.
 
-7. 7_generate_nearest_distance_matching_linkage.R: 
+7. 7_generate_simulated_growth_performance_table.R: 
 
-    This script generates the nearest distance matching linkage for the empirical data.
+    This script generates Table 3 from the paper. By modifying the specified $\alpha$ level (2 or 3) and $q$ (1.1 or 1.25), this script can also be used to generate Tables 3-7 from the supplement.
   
-8. 8_nearest_distance_matching_growth_model.R
+8. 8_generate_empirical_linkage_convergence_metrics.R
 
-    This script runs the downstream growth model on the empirical data given the NDM linkage and a set of input arguments (see above).
+    This script generates Figure 1 from the supplement.
 
-9. 9_polygon_overlap_matching_growth_model.R
+9. 9_generate_sCRPS_tables.R
 
-    This script runs the downstream growth model on the empirical data given the POM linkage and a set of input arguments (see above).
+    This script generates Tables 1 and 2 from the supplement.
 
-10. 10_generate_timing_results.R
+10. 10_generate_replicated_density_comparison_plot.R
 
-    This script generates the timing results for the record linkage model fit to the empirical data given a set of input arguments (see above).
+    This script generates Figure 2 from the supplement.
