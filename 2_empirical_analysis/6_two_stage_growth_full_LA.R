@@ -4,10 +4,9 @@
 
 # Arguments from command line ----
 args <- commandArgs(trailingOnly=TRUE)
-covars <- args[1]
-index <- as.numeric(args[2])
-mort_threshold <- args[3]
-model_type <- args[4]
+index <- as.numeric(args[1])
+mort_threshold <- args[2]
+model_type <- args[3]
 
 
 ## Load libraries and sampler functions ----
@@ -300,10 +299,10 @@ calc_scrps <- scrps(as.matrix(y_rep1), as.matrix(y_rep2), G[gc_index])$pointwise
 
 
 ## Save the results
-la_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, ".csv")
-rep1_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_rep1.csv")
-rep2_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_rep2.csv")
-scrps_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_index_", index, "_scrps_ests.csv")
+la_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_growth_cutoff_", mort_threshold, "_index_", index, ".csv")
+rep1_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_growth_cutoff_", mort_threshold, "_index_", index, "_rep1.csv")
+rep2_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_growth_cutoff_", mort_threshold, "_index_", index, "_rep2.csv")
+scrps_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/LA/emp_pooled_LA_N_25_model_", model_type, "_growth_cutoff_", mort_threshold, "_index_", index, "_scrps_ests.csv")
 
 write_csv(growth_results_df, file = la_results_file)
 write_csv(y_rep1, file = rep1_results_file)

@@ -194,10 +194,10 @@ y_rep2 <- as.data.frame(growth_results["y_rep2"])
 calc_scrps <- scrps(as.matrix(y_rep1), as.matrix(y_rep2), G[gc_index])$pointwise
 
 ## Save the results
-pom_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/POM/polygon_overlap_matching_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, ".csv")
-rep1_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/POM/polygon_overlap_matching_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_rep1.csv")
-rep2_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/POM/polygon_overlap_matching_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_rep2.csv")
-scrps_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/POM/polygon_overlap_matching_model_", model_type, "_covars_", covars, "_growth_cutoff_", mort_threshold, "_scrps_ests.csv")
+pom_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/POM/polygon_overlap_matching_model_", model_type, "_growth_cutoff_", mort_threshold, ".csv")
+rep1_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/POM/polygon_overlap_matching_model_", model_type, "_growth_cutoff_", mort_threshold, "_rep1.csv")
+rep2_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/POM/polygon_overlap_matching_model_", model_type, "_growth_cutoff_", mort_threshold, "_rep2.csv")
+scrps_results_file <- paste0("./2_empirical_analysis/model_results/growth_model/POM/polygon_overlap_matching_model_", model_type, "_growth_cutoff_", mort_threshold, "_scrps_ests.csv")
 
 write_csv(growth_results_df, file = pom_results_file)
 write_csv(y_rep1, file = rep1_results_file)

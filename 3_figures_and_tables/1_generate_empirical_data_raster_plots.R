@@ -2,7 +2,7 @@
 #### This script generates Figure 1 from the paper. ####
 ########################################################
 
-## Load libraries and sampler functions ----
+## Load libraries
 library(readr)
 library(dplyr)
 library(data.table)
