@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+SpRL.Rproj
 
 /resources/empirical_data/*.csv
 /resources/empirical_data/*.tif
