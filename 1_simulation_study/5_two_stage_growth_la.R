@@ -91,7 +91,7 @@ if(N_threshold == "10"){
   linkage_file <- paste0("./1_simulation_study/simulation_results/two_stage/linkage/", density, "_density_", noise, "_noise_",
                          alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_linkage_results.csv")
   latent_file <- paste0("./1_simulation_study/simulation_results/two_stage/raw_data/", density, "_density_", noise, "_noise_",
-                        walpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_raw_data.RDS")
+                        alpha, "_alpha_", index, "_index_", N_threshold, "_N_thresh_two_stage_raw_data.RDS")
   
 }
 

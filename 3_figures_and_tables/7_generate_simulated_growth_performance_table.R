@@ -98,7 +98,6 @@ test_table$coverage <- coverage_func(test_table$parameter, true_value = c(12, 1,
 
 TL_cov_table <- test_table %>%
   group_by(density, noise, true_alpha, parameter) %>%
-  filter(parameter %in% c("beta_0", "beta_1", "beta_2", "beta_3", "beta_4")) %>%
   summarise(cov_prob = mean(coverage)) %>%
   mutate(linkage = "TL")
 
@@ -158,7 +157,6 @@ test_table$coverage <- coverage_func(test_table$parameter, true_value = c(12, 1,
 
 NDM_cov_table <- test_table %>%
   group_by(density, noise, true_alpha, parameter) %>%
-  filter(parameter %in% c("beta_0", "beta_1", "beta_2", "beta_3", "beta_4")) %>%
   summarise(cov_prob = mean(coverage)) %>%
   mutate(linkage = "NDM")
 
@@ -225,7 +223,6 @@ test_table$coverage <- coverage_func(test_table$parameter, true_value = c(12, 1,
 
 LA_cov_table <- test_table %>%
   group_by(density, noise, true_alpha, parameter) %>%
-  filter(parameter %in% c("beta_0", "beta_1", "beta_2", "beta_3", "beta_4")) %>%
   summarise(cov_prob = mean(coverage)) %>%
   mutate(linkage = "LA")
 
@@ -250,10 +247,10 @@ growth_cov_table_mod <- growth_cov_table |>
 growth_cov_table_mod |>
   arrange(density, noise, true_alpha, linkage) |>
   select(-c(true_alpha)) |>
-  kbl(format = "latex", booktabs = TRUE, align = "lllccccc", linesep = "", escape = FALSE, digits = 4,
-      col.names = c("Density", "Noise", "Linkage Approach", "$\\beta_0$", "$\\beta_1$", "$\\beta_2$", "$\\beta_3$", "$\\beta_4$"),
+  kbl(format = "latex", booktabs = TRUE, align = "lllcccccccc", linesep = "", escape = FALSE, digits = 4,
+      col.names = c("Density", "Noise", "Linkage Approach", "$\\alpha$", "$\\beta_0$", "$\\beta_1$", "$\\beta_2$", "$\\beta_3$", "$\\beta_4$", "$\\gamma$", "$\\tau^2$"),
       label = "growth_cov_table", caption = c("")) |>
   kable_classic() |>
   collapse_rows(columns = 1:3) |>
-  add_header_above(header = c(" " = 3, "Empirical Coverage by Parameter" = 3), align = "c",
+  add_header_above(header = c(" " = 3, "Empirical Coverage by Parameter" = 8), align = "c",
                    bold = TRUE)

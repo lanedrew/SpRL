@@ -15,14 +15,17 @@ library(stringr)
 library(kableExtra)
 library(tidyr)
 library(patchwork)
+library(data.table)
+
 
 ## Set a colorblind friendly palate to use for visualizations
 cbbPalette <- c("#56B4E9", "#009E73", "#D55E00")
 
+
 ## Define a function to add the filename to each line of the imported dataset
 read_plus <- function(flnm) {
-  read_csv(flnm, show_col_types = FALSE) %>% 
-    mutate(filename = flnm)
+  fread(flnm) %>%
+    .[, filename := flnm] # Add the filename column directly in the data.table
 }
 
 
@@ -31,8 +34,9 @@ sprl_sim_table <-
   list.files(path = "./1_simulation_study/simulation_results/NDM/linkage_processed",
              pattern = "1_alpha", 
              full.names = T) |>  
-  mixedsort() |> 
-  map_df(~read_plus(.))
+  mixedsort() |>
+  lapply(read_plus) |>
+  rbindlist(use.names = TRUE, fill = TRUE)
 
 
 ## Modify the names from the files
@@ -55,8 +59,9 @@ sprl_sim_table <-
   list.files(path = "./1_simulation_study/simulation_results/two_stage/linkage_processed/",
              pattern = "1_alpha", 
              full.names = T) |>  
-  mixedsort() |> 
-  map_df(~read_plus(.))
+  mixedsort() |>
+  lapply(read_plus) |>
+  rbindlist(use.names = TRUE, fill = TRUE)
 
 
 ## Modify the names from the files
@@ -117,7 +122,7 @@ rec_plot <- linkage_join |>  mutate(noise = factor(noise,
   theme_bw() + theme(text = element_text(family = "serif", size = 14), legend.position = "bottom")
 
 ## Create and save the two panel plot (Figure 8)
-rl_metrics <- prec_plot + rec_plot+ plot_layout(guides = "collect") +
+rl_metrics <- prec_plot + rec_plot + plot_layout(guides = "collect") +
   plot_annotation(tag_levels = 'a', tag_suffix = ")") &
   theme(legend.position='bottom')
 

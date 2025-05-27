@@ -11,7 +11,7 @@ library(parsnip)
 library(tmvtnorm) 
 library(spatstat)
 library(mvtnorm)
-source('./resources/code/R_code/data_simulation/data_sim_functions.R')
+source('./resources/code/R_code/data_sim_functions.R')
 
 ## Read in the raster data for the covariates of interest
 slope_rast <- rast('./resources/empirical_data/Snodgrass_slope_1m.tif')

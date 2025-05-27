@@ -26,11 +26,11 @@ We provide descriptions of each script in the sequence below.
   
 6. 6_generate_simulated_linkage_performance_comparison_plot.R: 
 
-    This script generates Figure 8 from the paper.
+    This script generates Figure 8 from the paper. By modifying the specified $\alpha$ level (2 or 3) and $N$ threshold (10 or 25), this script can also be used to generate Plots 3-7 from the supplement.
 
 7. 7_generate_simulated_growth_performance_table.R: 
 
-    This script generates Table 3 from the paper. By modifying the specified $\alpha$ level (2 or 3) and $q$ (1.1 or 1.25), this script can also be used to generate Tables 3-7 from the supplement.
+    This script generates Table 3 from the paper. By modifying the specified $\alpha$ level (2 or 3) and $N$ threshold (10 or 25), this script can also be used to generate Tables 3-7 from the supplement.
   
 8. 8_generate_empirical_linkage_convergence_metrics.R
 

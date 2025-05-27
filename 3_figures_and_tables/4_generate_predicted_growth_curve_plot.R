@@ -380,10 +380,46 @@ growth_pred_all |> ggplot(aes(x = sizes, y = emp_means, group = dataset, color =
     legend.position = "bottom",
     text = element_text(family = "serif", size = 14)) -> gdd_plot
 
-## Create the two panel growth curve plot and save it (Figure 6)
-growth_comp_plot <- spp_plot + gdd_plot + plot_layout(guides = "collect") +
+## Generate predictions and plot for GDD/SPP interactions
+low_gdd_spp_obs <- c(apply(X_new[,1:3], 2, median), quantile(X_new[,4], .2), quantile(X_new[,5], .2), apply(X_new[,-c(1:5)], 2, median))
+high_gdd_spp_obs <- c(apply(X_new[,1:3], 2, median), quantile(X_new[,4], .8), quantile(X_new[,5], .8), apply(X_new[,-c(1:5)], 2, median))
+low_gdd_spp_obs[6] <- low_gdd_spp_obs[2]*low_gdd_spp_obs[4]
+high_gdd_spp_obs[6] <- high_gdd_spp_obs[2]*high_gdd_spp_obs[4]
+low_gdd_spp_obs[7] <- low_gdd_spp_obs[2]*low_gdd_spp_obs[5]
+high_gdd_spp_obs[7] <- high_gdd_spp_obs[2]*high_gdd_spp_obs[5]
+
+
+size_vec <- seq(min(S_1[gc_index]), max(S_1[gc_index]), by = .1)
+growth_pred_low <- data.frame(do.call(rbind, lapply(size_vec, function(x) growth_func(emp_all, low_gdd_spp_obs, x))), sizes = size_vec)
+growth_pred_high <- data.frame(do.call(rbind, lapply(size_vec, function(x) growth_func(emp_all, high_gdd_spp_obs, x))), sizes = size_vec)
+
+
+growth_pred_all <- data.frame(rbind(growth_pred_low,
+                                    growth_pred_high),
+                              dataset = rep(c("low_gdd_spp", "high_gdd_spp"),
+                                            each = length(size_vec))) |> 
+  mutate(dataset = factor(dataset, 
+                          levels = c("low_gdd_spp", "high_gdd_spp"),
+                          labels = c("Dry/Cold", "Wet/Hot")))
+
+growth_pred_all |> ggplot(aes(x = sizes, y = emp_means, group = dataset, color = dataset)) +
+  geom_line() +
+  geom_line(aes(y = X5.), linetype = "dashed", alpha = .5) +
+  geom_line(aes(y = X95.), linetype = "dashed", alpha = .5) +
+  scale_color_manual(values = cbbPalette[-3]) +
+  ylim(0, 8) +
+  labs(y = TeX('Annual Canopy Volume Growth in $m^3'), x = TeX('Canopy Volume in $m^3'),
+       title = "Combined Growth Impact of SP and GDD",
+       color = "Combined Conditions") +
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    text = element_text(family = "serif", size = 14)) -> gdd_spp_plot
+
+## Create the three panel growth curve plot and save it (Figure 6)
+growth_comp_plot <- spp_plot + gdd_plot + gdd_spp_plot +
   plot_annotation(tag_levels = 'a', tag_suffix = ")") &
   theme(legend.position='bottom')
 
 ggsave(filename = "6_predicted_growth_curves_plot.png", plot = growth_comp_plot, path = "./3_figures_and_tables/",
-       width = 20, height = 12, units = "cm", dpi = "retina")
+       width = 36, height = 14, units = "cm", dpi = "retina")
